@@ -1,0 +1,13 @@
+body{
+    background-color: whitesmoke;
+}
+
+h1, h3{
+    font-family: "Roboto Slab", serif;
+    font-style: normal;
+}
+
+p{
+    font-family: "Fira Sans", sans-serif;
+    font-style: normal;
+}
