@@ -39,7 +39,12 @@ body{
     padding-right: 60px;
 }
 
-h1, h3, .topnav{
+h1, h2, h3, h4, h5, h6 {
+    font-family: "Roboto Slab", serif;
+    font-style: normal;
+}
+
+.topnav {
     font-family: "Roboto Slab", serif;
     font-style: normal;
 }
@@ -47,4 +52,209 @@ h1, h3, .topnav{
 p{
     font-family: "Fira Sans", sans-serif;
     font-style: normal;
+}
+
+h2 {
+    margin-top: 40px;
+    margin-bottom: 20px;
+    color: #002677;
+}
+
+h3 {
+    margin-top: 30px;
+    margin-bottom: 15px;
+    color: #002677;
+}
+
+ul, ol {
+    font-family: "Fira Sans", sans-serif;
+    line-height: 1.6;
+    margin-bottom: 20px;
+}
+
+ul li, ol li {
+    margin-bottom: 8px;
+}
+
+.section-preview {
+    background-color: #f5f5f5;
+    padding: 20px;
+    border-left: 4px solid #002677;
+    margin: 30px 0;
+}
+
+.chart-section {
+    margin: 60px 0;
+    padding: 20px;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.chart-container {
+    margin: 30px 0;
+    background-color: white;
+    padding: 20px;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+}
+
+.footer {
+    background-color: #002677;
+    color: white;
+    text-align: center;
+    padding: 30px;
+    margin-top: 60px;
+}
+
+.footer p {
+    color: white;
+    margin: 5px 0;
+}
+
+/* SVG Styling - All SVG elements should use these selectors */
+.chart-container svg {
+    display: block;
+    margin: 0 auto;
+}
+
+.chart-container .bar {
+    fill: #4a90e2;
+}
+
+.chart-container .bar:hover {
+    fill: #2c6cb0;
+    opacity: 0.8;
+}
+
+.chart-container .bar-group-1 {
+    fill: #4a90e2;
+}
+
+.chart-container .bar-group-2 {
+    fill: #e74c3c;
+}
+
+.chart-container .axis {
+    font-family: "Fira Sans", sans-serif;
+    font-size: 12px;
+}
+
+.chart-container .axis-label {
+    font-family: "Roboto Slab", serif;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.chart-container .grid-line {
+    stroke: #e0e0e0;
+    stroke-width: 1;
+    stroke-dasharray: 3,3;
+}
+
+.chart-container .heatmap-cell {
+    stroke: white;
+    stroke-width: 1;
+}
+
+.chart-container .heatmap-cell:hover {
+    stroke: #333;
+    stroke-width: 2;
+}
+
+.chart-container .waffle-cell {
+    stroke: white;
+    stroke-width: 1;
+}
+
+.chart-container .waffle-cell:hover {
+    stroke: #333;
+    stroke-width: 2;
+}
+
+.chart-container .tooltip {
+    position: absolute;
+    background-color: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-family: "Fira Sans", sans-serif;
+    font-size: 12px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.chart-container .tooltip.visible {
+    opacity: 1;
+}
+
+.chart-container .legend {
+    font-family: "Fira Sans", sans-serif;
+    font-size: 12px;
+}
+
+.chart-container .legend-item {
+    cursor: pointer;
+}
+
+.chart-container .stacked-bar {
+    stroke: white;
+    stroke-width: 1;
+}
+
+.chart-container .stacked-bar:hover {
+    opacity: 0.8;
+    stroke: #333;
+    stroke-width: 2;
+}
+
+/* Category-based colors for stacked bars and waffle charts */
+.chart-container .category-state {
+    fill: #4a90e2;
+}
+
+.chart-container .category-rebel {
+    fill: #e74c3c;
+}
+
+.chart-container .category-civilian {
+    fill: #2ecc71;
+}
+
+.chart-container .category-other {
+    fill: #f39c12;
+}
+
+.chart-container .category-military {
+    fill: #4a90e2;
+}
+
+.chart-container .category-civilians {
+    fill: #e74c3c;
+}
+
+.chart-container .category-rebels {
+    fill: #2ecc71;
+}
+
+.chart-container .category-children {
+    fill: #f39c12;
+}
+
+.chart-container .category-other-waffle {
+    fill: #9b59b6;
+}
+
+/* Stacked bar chart categories */
+.chart-container .category-targeting {
+    fill: #e74c3c;
+}
+
+.chart-container .category-demonstrations {
+    fill: #2ecc71;
+}
+
+.chart-container .category-combatants {
+    fill: #4a90e2;
 }

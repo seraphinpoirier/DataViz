@@ -1,41 +1,108 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width" />
     <title>Homepage</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fira+Sans:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Roboto+Slab:wght@100..900&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fira+Sans:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Roboto+Slab:wght@100..900&display=swap"
+      rel="stylesheet"
+    />
   </head>
-  <link rel="stylesheet" href="index.css">
-  
-  
-  <body>
+  <link rel="stylesheet" href="index.css" />
 
+  <body>
     <div class="topnav">
-      <a class="active" href="#home">Home</a>
-      <a href="#news">News</a>
-      <a href="#contact">Contact</a>
-      <a href="#about">About</a>
+      <a class="active" href="index.html">Home</a>
+      <a href="visualizations.html">Visualizations</a>
     </div>
-    
+
     <div class="header">
-      <h1>Data Visualisation</h1>
+      <h1>Data Visualizations</h1>
       <p>Visualizing Conflict and Human Suffering through Data</p>
-    </div> 
-    <div class="introduction">
-      <p>
-          Project by<br>
-          Stefano Infusini (<i>S5211120</i>), Aymen M. Saney (<i>S6021940</i>) & Séraphin Poirier (<i>S9259977</i>)
-      </p>
-      <h3>
-          Introduction
-      </h3>
-      <p>
-          The world is a violent place plagued by conflict. This project aims to help users realise the different types of violences
-          which have been inflicted to civilians in these past years.
-      </p>
     </div>
+
+    <div class="introduction">
+      <h2>Group: Data Vizionaries</h2>
+      <p>
+        Project by<br />
+        Stefano Infusini (<i>S5211120</i>), Aymen M. Saney (<i>S6021940</i>) &
+        Séraphin Poirier (<i>S9259977</i>)
+      </p>
+
+      <h2>Introduction</h2>
+      <p>
+        The world is a violent place plagued by conflict. This project aims to
+        help users realise the different types of violences which have been
+        inflicted to civilians in these past years. Through interactive data
+        visualizations, we explore the tragic reality of modern conflicts, their
+        human cost, and patterns that emerge from systematic data collection.
+      </p>
+
+      <h2>About the Data</h2>
+      <p>
+        This visualization project utilizes mainly uses the following data source to provide a
+        comprehensive view of conflict and human suffering:
+      </p>
+      <ul>
+        <li>
+          <strong>ACLED (Armed Conflict Location & Event Data Project):</strong>
+          Real-time data collection of political violence and protest events
+          worldwide.
+        </li>
+      </ul>
+      <p>
+        The datasets used in this project cover various aspects of conflict
+        including:
+      </p>
+      <ol>
+        <li>Fatalities by conflict type and region</li>
+        <li>Civilian vs. combatant casualties</li>
+        <li>Geographic distribution of conflicts</li>
+      </ol>
+
+      <h2>Project Sections</h2>
+
+      <section class="section-preview">
+        <h3>Visualizations</h3>
+        <p>
+          This section presents five mandatory visualizations exploring conflict
+          data from multiple perspectives:
+        </p>
+        <ul>
+          <li>
+            <strong>Bar Chart:</strong> Fatalities by conflict type across
+            different regions
+          </li>
+          <li>
+            <strong>Grouped Bar Chart:</strong> Comparison of civilian and
+            combatant casualties over time
+          </li>
+          <li>
+            <strong>Heatmap:</strong> Temporal patterns of conflict events by
+            region
+          </li>
+          <li>
+            <strong>100% Stacked Bar Chart:</strong> Proportion of different
+            violence types within each region
+          </li>
+        </ul>
+        <p>
+          Each visualization is interactive, allowing users to explore the data
+          in detail. Hover over elements to see specific values, and observe the
+          patterns that emerge from systematic data collection on human
+          suffering.
+        </p>
+      </section>
+    </div>
+
+    <footer class="footer">
+      <p>&copy; <span id="footer-year"></span> Vizionaries</p>
+    </footer>
+    <script>
+      document.getElementById("footer-year").textContent = new Date().getFullYear();
+    </script>
   </body>
 </html>

@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <title>Visualizations</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fira+Sans:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Roboto+Slab:wght@100..900&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <link rel="stylesheet" href="index.css" />
+  </head>
+
+  <body>
+    <div class="topnav">
+      <a href="index.html">Home</a>
+      <a class="active" href="visualizations.html">Visualizations</a>
+    </div>
+
+    <div class="header">
+      <h1>Data Visualizations</h1>
+      <p>Exploring Conflict Data Through Interactive Charts</p>
+    </div>
+
+    <div class="introduction">
+      <h2>Interactive Data Exploration</h2>
+      <p>
+        This page presents a comprehensive set of visualizations examining
+        conflict and human suffering data. Each chart provides unique insights
+        into different aspects of violence, casualties, and their patterns
+        across time and geography. Use the interactive features to explore the
+        data in detail.
+      </p>
+
+      <!-- Bar Chart Section -->
+      <section class="chart-section">
+        <h3>Top Countries by Total Fatalities</h3>
+        <p>
+          This bar chart displays the top 10 countries with the highest total
+          reported fatalities from conflicts, aggregated across all years in the
+          dataset. It helps identify which countries have experienced the most
+          severe human cost from political violence.
+        </p>
+        <div id="bar-chart" class="chart-container"></div>
+      </section>
+
+      <!-- Grouped Bar Chart Section -->
+      <section class="chart-section">
+        <h3>Civilian vs Combatant Fatalities by Year</h3>
+        <p>
+          The grouped bar chart compares reported civilian and combatant
+          fatalities over recent years (2018-2024), highlighting the
+          disproportionate impact of conflicts on civilian populations.
+          Combatant fatalities are calculated as the difference between total
+          and civilian fatalities.
+        </p>
+        <div id="grouped-bar-chart" class="chart-container"></div>
+      </section>
+
+      <!-- Heatmap Section -->
+      <section class="chart-section">
+        <h3>Events Targeting Civilians by Region and Year</h3>
+        <p>
+          This heatmap visualizes the intensity of events targeting civilians
+          across different regions throughout recent years, revealing temporal
+          patterns and regional hotspots of violence against civilians. Data is
+          aggregated by region (Middle East & Asia, Africa, Europe, Americas)
+          for the years 2018-2024.
+        </p>
+        <div id="heatmap" class="chart-container"></div>
+      </section>
+
+      <!-- 100% Stacked Bar Chart Section -->
+      <section class="chart-section">
+        <h3>Distribution of Event Types by Region</h3>
+        <p>
+          The 100% stacked bar chart shows the proportional breakdown of
+          different event types within each region, including events targeting
+          civilians, demonstration events, and other conflict-related events.
+          This allows for relative comparisons across geographical areas to
+          understand the nature of violence in each region.
+        </p>
+        <div id="stacked-bar-chart" class="chart-container"></div>
+      </section>
+
+    </div>
+
+    <footer class="footer">
+      <p>&copy; <span id="footer-year"></span> Vizionaries</p>
+    </footer>
+    <script>
+      document.getElementById("footer-year").textContent =
+        new Date().getFullYear();
+    </script>
+
+    <script src="visualizations.js"></script>
+  </body>
+</html>
