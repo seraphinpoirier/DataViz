@@ -74,6 +74,8 @@ Promise.all([
       createGroupedBarChart();
       createHeatmap();
       createStackedBarChart();
+      createWaffleChart();
+
     }
   )
   .catch((error) => {
@@ -686,4 +688,87 @@ function createStackedBarChart() {
 
     legendRow.append("text").attr("x", 20).attr("y", 12).text(keyLabels[key]);
   });
+
+  function createWaffleChart() {
+  // Combine the two event types you have
+  const totalEvents = [
+    {
+      type: "Events targeting civilians",
+      value: d3.sum(loadedData.eventsTargetingCivilians, (d) => d.events),
+    },
+    {
+      type: "Demonstration events",
+      value: d3.sum(loadedData.demonstrationEvents, (d) => d.events),
+    },
+  ];
+
+  const total = d3.sum(totalEvents, (d) => d.value);
+
+  // Define waffle grid size
+  const numSquares = 100; // total squares in waffle (10x10)
+  const squareSize = 20;
+  const cols = 10;
+  const rows = numSquares / cols;
+
+  // Compute number of squares per category
+  const waffleData = [];
+  totalEvents.forEach((d) => {
+    d.units = Math.round((d.value / total) * numSquares);
+    for (let i = 0; i < d.units; i++) {
+      waffleData.push({
+        type: d.type,
+      });
+    }
+  });
+
+  // Set up SVG
+  const width = cols * squareSize;
+  const height = rows * squareSize;
+
+  const svg = d3
+    .select("#waffleChart")
+    .append("svg")
+    .attr("width", width)
+    .attr("height", height)
+    .style("font-family", "sans-serif");
+
+  const color = d3
+    .scaleOrdinal()
+    .domain(totalEvents.map((d) => d.type))
+    .range(["#d1495b", "#edae49"]);
+
+  // Draw squares
+  svg
+    .selectAll("rect")
+    .data(waffleData)
+    .enter()
+    .append("rect")
+    .attr("x", (_, i) => (i % cols) * squareSize)
+    .attr("y", (_, i) => Math.floor(i / cols) * squareSize)
+    .attr("width", squareSize - 2)
+    .attr("height", squareSize - 2)
+    .attr("fill", (d) => color(d.type));
+
+  // Add legend
+  const legend = d3
+    .select("#waffleChart")
+    .append("div")
+    .style("margin-top", "10px");
+
+  legend
+    .selectAll(".legend-item")
+    .data(totalEvents)
+    .enter()
+    .append("div")
+    .style("display", "flex")
+    .style("align-items", "center")
+    .style("margin-bottom", "5px")
+    .html(
+      (d) =>
+        `<div style="width:15px; height:15px; background:${color(
+          d.type
+        )}; margin-right:8px;"></div> ${d.type} (${d3.format(",")(d.value)})`
+    );
+}
+
 }
