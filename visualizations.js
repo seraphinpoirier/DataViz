@@ -690,6 +690,8 @@ function createStackedBarChart() {
   });
 
   function createWaffleChart() {
+    if (!loadedData.eventsTargetingCivilians || !loadedData.demonstrationEvents)
+    return;
   // Combine the two event types you have
   const totalEvents = [
     {
