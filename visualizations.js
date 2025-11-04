@@ -687,7 +687,7 @@ function createWaffleChart() {
   const width = cols * squareSize;
   const height = rows * squareSize;
 
-  const container = d3.select("#waffleChart");
+  const container = d3.select("#waffle-chart");
   container.html("");
 
   const svg = container
@@ -729,3 +729,4 @@ function createWaffleChart() {
         )}; margin-right:8px;"></div> ${d.type} (${d3.format(",")(d.value)})`
     );
 }
+
