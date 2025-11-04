@@ -730,3 +730,172 @@ function createWaffleChart() {
     );
 }
 
+// 6. Choropleth Map – Geographic distribution of conflicts
+async function createChoroplethMap() {
+  if (!loadedData.eventsTargetingCivilians || !loadedData.demonstrationEvents) return;
+
+  const container = d3.select("#choropleth-map");
+  container.html("");
+
+  const margin = { top: 10, right: 10, bottom: 10, left: 10 };
+  const width = 980 - margin.left - margin.right;
+  const height = 540 - margin.top - margin.bottom;
+
+  const svg = container
+    .append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+    .append("g")
+    .attr("transform", `translate(${margin.left},${margin.top})`);
+
+  const tooltip = container.append("div").attr("class", "tooltip");
+
+  // Aggregate events by COUNTRY (sum across years)
+  const byCountryEvents = new Map();
+
+  const addEvents = (arr, key) => {
+    arr.forEach(d => {
+      const c = (d.country || "").trim();
+      const v = +d[key] || 0;
+      byCountryEvents.set(c, (byCountryEvents.get(c) || 0) + v);
+    });
+  };
+  addEvents(loadedData.eventsTargetingCivilians, "events");
+  addEvents(loadedData.demonstrationEvents, "events");
+
+  // Name reconciliation (common mismatches between GeoJSON names and dataset names)
+  const nameFix = new Map([
+    ["Congo (Brazzaville)","Republic of the Congo"],
+    ["Congo (Kinshasa)","Democratic Republic of the Congo"],
+    ["Côte d’Ivoire","Cote d'Ivoire"],
+    ["Côte d'Ivoire","Cote d'Ivoire"],
+    ["Burma","Myanmar"],
+    ["Swaziland","Eswatini"],
+    ["Palestine","Palestine"],
+    ["Palestinian Territory","Palestine"],
+    ["Syria","Syrian Arab Republic"],
+    ["Russia","Russian Federation"],
+    ["Iran","Iran, Islamic Republic of"],
+    ["Moldova","Republic of Moldova"],
+    ["Bolivia","Bolivia (Plurinational State of)"],
+    ["Tanzania","United Republic of Tanzania"],
+    ["Venezuela","Venezuela (Bolivarian Republic of)"],
+    ["Laos","Lao People's Democratic Republic"],
+    ["North Korea","Democratic People's Republic of Korea"],
+    ["South Korea","Republic of Korea"],
+    ["Cape Verde","Cabo Verde"],
+    ["Eswatini","Eswatini"],
+    ["Ivory Coast","Cote d'Ivoire"],
+    ["Sahrawi Arab Democratic Republic","Western Sahara"],
+    ["Turkey","Türkiye"]
+  ]);
+
+  // Load topojson helper if needed
+  async function ensureTopojson() {
+    if (window.topojson) return;
+    await new Promise((res, rej) => {
+      const s = document.createElement("script");
+      s.src = "https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js";
+      s.onload = res; s.onerror = rej;
+      document.head.appendChild(s);
+    });
+  }
+  await ensureTopojson();
+
+  // Load world topology
+  const world = await d3.json("https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json");
+  const countries = topojson.feature(world, world.objects.countries);
+
+  const projection = d3.geoNaturalEarth1().fitSize([width, height], countries);
+  const path = d3.geoPath(projection);
+
+  // Build value lookup keyed by GeoJSON country name
+  // We try exact match, then the reconciliation map, then a relaxed comparison.
+  const valueByName = new Map();
+  // Precompute a lowercase map of dataset names for fallback matching
+  const dsLower = new Map([...byCountryEvents.entries()].map(([k,v]) => [k.toLowerCase(), v]));
+
+  const geoNames = new Set(countries.features.map(f => f.properties.name));
+
+  geoNames.forEach(name => {
+    const fixed = nameFix.get(name) || name;
+    let v = byCountryEvents.get(fixed);
+    if (v == null) {
+      v = byCountryEvents.get(name);
+    }
+    if (v == null) {
+      const lc = fixed.toLowerCase();
+      // try contains-style loose match
+      let hit = null;
+      for (const [nLower, val] of dsLower) {
+        if (nLower === lc || nLower.includes(lc) || lc.includes(nLower)) { hit = val; break; }
+      }
+      v = hit;
+    }
+    valueByName.set(name, v || 0);
+  });
+
+  const values = Array.from(valueByName.values());
+  const maxVal = d3.max(values) || 1;
+
+  const color = d3.scaleQuantize()
+    .domain([0, maxVal])
+    .range(d3.schemeReds[7]);
+
+  svg
+    .selectAll("path.country")
+    .data(countries.features)
+    .enter()
+    .append("path")
+    .attr("class", "country")
+    .attr("d", path)
+    .attr("fill", d => color(valueByName.get(d.properties.name) || 0))
+    .attr("stroke", "#fff")
+    .attr("stroke-width", 0.6)
+    .on("mousemove", function (event, d) {
+      const name = d.properties.name;
+      const v = valueByName.get(name) || 0;
+      tooltip
+        .classed("visible", true)
+        .style("left", event.pageX + 12 + "px")
+        .style("top", event.pageY - 12 + "px")
+        .html(`${name}<br>${v.toLocaleString()} events`);
+    })
+    .on("mouseout", () => tooltip.classed("visible", false));
+
+  // Legend
+  const legendWidth = 260, legendHeight = 10;
+  const legend = svg.append("g").attr("transform", `translate(${width - legendWidth - 12}, ${height - 36})`);
+
+  const legendScale = d3.scaleLinear().domain(color.domain()).range([0, legendWidth]);
+  const legendAxis = d3.axisBottom(legendScale)
+    .tickSize(6)
+    .tickValues(color.range().map(d => color.invertExtent(d)[0]))
+    .tickFormat(d3.format(".2s"));
+
+  const gradId = "choropleth-grad";
+  const defs = svg.append("defs");
+  const linearGrad = defs.append("linearGradient").attr("id", gradId);
+
+  color.range().forEach((c, i, arr) => {
+    linearGrad.append("stop")
+      .attr("offset", `${(i / (arr.length - 1)) * 100}%`)
+      .attr("stop-color", c);
+  });
+
+  legend.append("rect")
+    .attr("width", legendWidth)
+    .attr("height", legendHeight)
+    .attr("fill", `url(#${gradId})`);
+
+  legend.append("g")
+    .attr("transform", `translate(0,${legendHeight})`)
+    .call(legendAxis)
+    .call(g => g.select(".domain").remove());
+
+  legend.append("text")
+    .attr("x", 0)
+    .attr("y", -6)
+    .attr("class", "axis-label")
+    .text("Total conflict events (civilians & demonstrations)");
+}
