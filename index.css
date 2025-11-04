@@ -1,220 +1,260 @@
-:root{
-  --bg:#f7f7f5;
-  --ink:#111111;
-  --ink-2:#3a3a3a;
-  --muted:#6f6f6f;
-  --border:#e5e5e5;
-  --accent:#0b4f6c;
-  --accent-2:#1b6b93;
-  --surface:#ffffff;
-  --shadow:0 10px 30px rgba(0,0,0,.05);
-  --radius:12px;
-  --space:clamp(18px,2.4vw,28px);
+/* Add a black background color to the top navigation */
+.topnav {
+  background-color: #002677;
+  overflow: hidden;
 }
 
-*{box-sizing:border-box}
-html,body{height:100%}
+/* Style the links inside the navigation bar */
+.topnav a {
+  float: left;
+  color: #f2f2f2;
+  text-align: center;
+  padding: 14px 16px;
+  text-decoration: none;
+  font-size: 17px;
+}
+
+/* Change the color of links on hover */
+.topnav a:hover {
+  background-color: #ddd;
+  color: black;
+}
+
+.header {
+  padding: 60px;
+  text-align: center;
+  background-image: url("cover_picture_gaza_npr.jpg");
+  background-size: cover;
+  color: white;
+  font-size: 30px;
+  text-shadow: 1px 1px 2px lightgray;
+}
+
 body{
-  margin:0;
-  background:var(--bg);
-  color:var(--ink);
-  font:16px/1.7 "Source Serif 4","Georgia","Times New Roman",serif;
-  -webkit-font-smoothing:antialiased;
-  text-rendering:optimizeLegibility;
-}
-
-.topnav{
-  position:sticky;top:0;z-index:1000;
-  background:#fff;
-  border-bottom:1px solid var(--border);
-}
-.topnav a{
-  display:inline-block;
-  color:var(--ink);
-  padding:14px 18px;
-  text-decoration:none;
-  font:600 15px/1 "Inter","Helvetica Neue",Arial,sans-serif;
-  letter-spacing:.2px;
-  transition:color .2s ease, background .2s ease;
-}
-.topnav a:hover{color:var(--accent)}
-.topnav a.active{color:#fff;background:var(--accent)}
-
-.header{
-  min-height:280px;
-  padding:clamp(40px,7vw,90px) 16px;
-  text-align:center;
-  color:#fff;
-  background-image:linear-gradient(rgba(17,17,17,.55),rgba(17,17,17,.55)),url("cover_picture_gaza_npr.jpg");
-  background-size:cover;background-position:center;
-  display:grid;place-items:center;
-}
-.header h1{
-  margin:0 0 10px 0;
-  font:800 clamp(32px,5vw,56px)/1.1 "Source Serif 4","Georgia",serif;
-  letter-spacing:.2px;
-}
-.header p{
-  margin:0;
-  font:500 clamp(15px,1.6vw,18px)/1.4 "Inter","Helvetica Neue",Arial,sans-serif;
-  opacity:.9;
+    background-color: whitesmoke;
 }
 
 .introduction{
-  max-width:1120px;
-  margin:0 auto;
-  padding:var(--space);
+    padding-left: 60px;
+    padding-right: 60px;
 }
 
-h1,h2,h3,h4,h5,h6{
-  color:var(--ink);
-  margin:0 0 10px 0;
-  font-family:"Source Serif 4","Georgia",serif;
+h1, h2, h3, h4, h5, h6 {
+    font-family: "Roboto Slab", serif;
+    font-style: normal;
 }
-h2{font-size:clamp(24px,3vw,34px); line-height:1.2}
-h3{font-size:clamp(18px,2.2vw,22px); line-height:1.25}
+
+.topnav {
+    font-family: "Roboto Slab", serif;
+    font-style: normal;
+}
 
 p{
-  margin:0 0 16px 0;
-  color:var(--ink-2);
-  font-family:"Inter","Helvetica Neue",Arial,sans-serif;
-  font-size:17px;
+    font-family: "Fira Sans", sans-serif;
+    font-style: normal;
 }
 
-ul,ol{
-  color:var(--ink-2);
-  margin:0 0 22px 1.2rem;
-  font-family:"Inter","Helvetica Neue",Arial,sans-serif;
-}
-ul li,ol li{margin-bottom:8px}
-
-.section-preview{
-  background:#fff;
-  border-left:4px solid var(--ink);
-  border-radius:10px;
-  box-shadow:var(--shadow);
-  padding:18px 20px;
-  margin:28px 0;
+h2 {
+    margin-top: 40px;
+    margin-bottom: 20px;
+    color: #002677;
 }
 
-.chart-section{
-  margin:clamp(28px,4vw,56px) 0;
-  padding:clamp(18px,2.2vw,26px);
-  background:var(--surface);
-  border:1px solid var(--border);
-  border-radius:var(--radius);
-  box-shadow:var(--shadow);
-}
-.chart-section>p{max-width:75ch}
-
-.chart-container{
-  margin:22px 0 6px;
-  background:#fff;
-  padding:clamp(14px,2vw,20px);
-  border:1px solid var(--border);
-  border-radius:10px;
-  position:relative;
+h3 {
+    margin-top: 30px;
+    margin-bottom: 15px;
+    color: #002677;
 }
 
-.chart-container svg{
-  display:block;
-  max-width:100%;
-  height:auto;
-  margin-inline:auto;
+ul, ol {
+    font-family: "Fira Sans", sans-serif;
+    line-height: 1.6;
+    margin-bottom: 20px;
 }
 
-.axis{
-  font:12px "Inter","Helvetica Neue",Arial,sans-serif;
-  fill:var(--muted);
-}
-.axis path,.axis line{stroke:#d8dae0}
-
-.axis-label{
-  font:700 13.5px "Source Serif 4","Georgia",serif;
-  fill:#222;
+ul li, ol li {
+    margin-bottom: 8px;
 }
 
-.grid-line{
-  stroke:#ebedf2;
-  stroke-width:1;
-  stroke-dasharray:3 3;
+.section-preview {
+    background-color: #f5f5f5;
+    padding: 20px;
+    border-left: 4px solid #002677;
+    margin: 30px 0;
 }
 
-.bar{
-  fill:#1e77b4;
-  transition:opacity .2s ease, transform .2s ease;
+.chart-section {
+    margin: 60px 0;
+    padding: 20px;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
-.bar:hover{opacity:.9; transform:translateY(-2px)}
 
-.bar-group-1{fill:#1e77b4}
-.bar-group-2{fill:#d1495b}
-
-.heatmap-cell{
-  stroke:#fff; stroke-width:1; rx:4; ry:4;
-  transition:stroke-width .15s ease, transform .15s ease;
+.chart-container {
+    margin: 30px 0;
+    background-color: white;
+    padding: 20px;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
 }
-.heatmap-cell:hover{stroke:#222; stroke-width:2; transform:scale(1.02)}
 
-.waffle-cell{
-  stroke:#fff; stroke-width:1; rx:4; ry:4;
-  transition:transform .15s ease, opacity .15s ease;
+.footer {
+    background-color: #002677;
+    color: white;
+    text-align: center;
+    padding: 30px;
+    margin-top: 60px;
 }
-.waffle-cell:hover{transform:scale(1.04); opacity:.92}
 
-.stacked-bar{
-  stroke:#fff; stroke-width:1;
-  transition:opacity .2s ease, transform .2s ease;
+.footer p {
+    color: white;
+    margin: 5px 0;
 }
-.stacked-bar:hover{opacity:.92; transform:translateY(-2px)}
 
-.category-state{fill:#1e77b4}
-.category-rebel{fill:#d1495b}
-.category-civilian{fill:#2ca25f}
-.category-other{fill:#f0a202}
-.category-military{fill:#1e77b4}
-.category-civilians{fill:#d1495b}
-.category-rebels{fill:#2ca25f}
-.category-children{fill:#f0a202}
-.category-other-waffle{fill:#7b6fd6}
-.category-targeting{fill:#d1495b}
-.category-demonstrations{fill:#2ca25f}
-.category-combatants{fill:#1e77b4}
-
-.tooltip{
-  position:absolute; left:0; top:0;
-  transform:translate(-50%,-110%);
-  background:#111;
-  color:#fff;
-  padding:8px 10px;
-  border-radius:10px;
-  box-shadow:0 14px 34px rgba(0,0,0,.25);
-  border:1px solid rgba(255,255,255,.08);
-  font:12px/1.3 "Inter","Helvetica Neue",Arial,sans-serif;
-  pointer-events:none;
-  opacity:0;
-  transition:opacity .18s ease, transform .18s ease;
+/* SVG Styling - All SVG elements should use these selectors */
+.chart-container svg {
+    display: block;
+    margin: 0 auto;
 }
-.tooltip.visible{opacity:1; transform:translate(-50%,-120%)}
 
-.legend{
-  display:grid; gap:8px; margin-top:10px;
-  font:12px "Inter","Helvetica Neue",Arial,sans-serif;
+.chart-container .bar {
+    fill: #4a90e2;
 }
-.legend-item{display:flex; align-items:center; gap:8px; cursor:pointer}
 
-.footer{
-  background:#0f2a57;
-  color:#cfd6e6;
-  text-align:center;
-  padding:40px 16px;
-  margin-top:64px;
-  box-shadow:var(--shadow);
+.chart-container .bar:hover {
+    fill: #2c6cb0;
+    opacity: 0.8;
 }
-.footer p{margin:6px 0; color:#cfd6e6}
 
-@media (max-width:900px){
-  .introduction{padding:18px}
-  .chart-section{padding:18px}
-  .chart-container{padding:16px}
-  .header{min-height:220px}
+.chart-container .bar-group-1 {
+    fill: #4a90e2;
+}
+
+.chart-container .bar-group-2 {
+    fill: #e74c3c;
+}
+
+.chart-container .axis {
+    font-family: "Fira Sans", sans-serif;
+    font-size: 12px;
+}
+
+.chart-container .axis-label {
+    font-family: "Roboto Slab", serif;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.chart-container .grid-line {
+    stroke: #e0e0e0;
+    stroke-width: 1;
+    stroke-dasharray: 3,3;
+}
+
+.chart-container .heatmap-cell {
+    stroke: white;
+    stroke-width: 1;
+}
+
+.chart-container .heatmap-cell:hover {
+    stroke: #333;
+    stroke-width: 2;
+}
+
+.chart-container .waffle-cell {
+    stroke: white;
+    stroke-width: 1;
+}
+
+.chart-container .waffle-cell:hover {
+    stroke: #333;
+    stroke-width: 2;
+}
+
+.chart-container .tooltip {
+    position: absolute;
+    background-color: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-family: "Fira Sans", sans-serif;
+    font-size: 12px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.chart-container .tooltip.visible {
+    opacity: 1;
+}
+
+.chart-container .legend {
+    font-family: "Fira Sans", sans-serif;
+    font-size: 12px;
+}
+
+.chart-container .legend-item {
+    cursor: pointer;
+}
+
+.chart-container .stacked-bar {
+    stroke: white;
+    stroke-width: 1;
+}
+
+.chart-container .stacked-bar:hover {
+    opacity: 0.8;
+    stroke: #333;
+    stroke-width: 2;
+}
+
+/* Category-based colors for stacked bars and waffle charts */
+.chart-container .category-state {
+    fill: #4a90e2;
+}
+
+.chart-container .category-rebel {
+    fill: #e74c3c;
+}
+
+.chart-container .category-civilian {
+    fill: #2ecc71;
+}
+
+.chart-container .category-other {
+    fill: #f39c12;
+}
+
+.chart-container .category-military {
+    fill: #4a90e2;
+}
+
+.chart-container .category-civilians {
+    fill: #e74c3c;
+}
+
+.chart-container .category-rebels {
+    fill: #2ecc71;
+}
+
+.chart-container .category-children {
+    fill: #f39c12;
+}
+
+.chart-container .category-other-waffle {
+    fill: #9b59b6;
+}
+
+/* Stacked bar chart categories */
+.chart-container .category-targeting {
+    fill: #e74c3c;
+}
+
+.chart-container .category-demonstrations {
+    fill: #2ecc71;
+}
+
+.chart-container .category-combatants {
+    fill: #4a90e2;
 }
