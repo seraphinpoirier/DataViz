@@ -22,6 +22,71 @@ function parseNum(d, key) {
   return isNaN(val) ? 0 : val;
 }
 
+// Load all CSV data files
+Promise.all([
+  d3.csv(
+    "data/number_of_reported_fatalities_by_country-year_as-of-24Oct2025_0.csv",
+    (d) => ({
+      country: d.COUNTRY,
+      year: +d.YEAR,
+      fatalities: parseNum(d, "FATALITIES"),
+    })
+  ),
+  d3.csv(
+    "data/number_of_reported_civilian_fatalities_by_country-year_as-of-24Oct2025_0.csv",
+    (d) => ({
+      country: d.COUNTRY,
+      year: +d.YEAR,
+      fatalities: parseNum(d, "FATALITIES"),
+    })
+  ),
+  d3.csv(
+    "data/number_of_events_targeting_civilians_by_country-year_as-of-24Oct2025_0.csv",
+    (d) => ({
+      country: d.COUNTRY,
+      year: +d.YEAR,
+      events: parseNum(d, "EVENTS"),
+    })
+  ),
+  d3.csv(
+    "data/number_of_demonstration_events_by_country-year_as-of-24Oct2025_0.csv",
+    (d) => ({
+      country: d.COUNTRY,
+      year: +d.YEAR,
+      events: parseNum(d, "EVENTS"),
+    })
+  ),
+])
+  .then(
+    ([
+      fatalities,
+      civilianFatalities,
+      eventsTargetingCivilians,
+      demonstrationEvents,
+    ]) => {
+      loadedData.fatalities = fatalities;
+      loadedData.civilianFatalities = civilianFatalities;
+      loadedData.eventsTargetingCivilians = eventsTargetingCivilians;
+      loadedData.demonstrationEvents = demonstrationEvents;
+
+      createBarChart();
+      createGroupedBarChart();
+      createHeatmap();
+      createStackedBarChart();
+      createWaffleChart();
+    }
+  )
+  .catch((error) => {
+    console.error("Error loading data:", error);
+    d3.select("body")
+      .append("div")
+      .style("padding", "20px")
+      .style("color", "red")
+      .html(
+        "(1) Error loading data files. Please ensure all CSV files are available in the data folder."
+      );
+  });
+
 // 1. Bar Chart - Top countries by total fatalities
 function createBarChart() {
   if (!loadedData.fatalities) return;
@@ -588,7 +653,7 @@ function createStackedBarChart() {
   });
 }
 
-// 5. Waffle Chart
+// 5. Waffle Chart - Distribution of event types
 function createWaffleChart() {
   if (!loadedData.eventsTargetingCivilians || !loadedData.demonstrationEvents)
     return;
@@ -622,11 +687,45 @@ function createWaffleChart() {
   const width = cols * squareSize;
   const height = rows * squareSize;
 
-  d3.select("#waffleChart").html("");
+  const container = d3.select("#waffleChart");
+  container.html("");
 
-  const svg = d3
-    .select("#waffleChart")
+  const svg = container
     .append("svg")
     .attr("width", width)
     .attr("height", height)
-    .style("
+    .style("font-family", "sans-serif");
+
+  const color = d3
+    .scaleOrdinal()
+    .domain(totalEvents.map((d) => d.type))
+    .range(["#d1495b", "#edae49"]);
+
+  svg
+    .selectAll("rect")
+    .data(waffleData)
+    .enter()
+    .append("rect")
+    .attr("x", (_, i) => (i % cols) * squareSize)
+    .attr("y", (_, i) => Math.floor(i / cols) * squareSize)
+    .attr("width", squareSize - 2)
+    .attr("height", squareSize - 2)
+    .attr("fill", (d) => color(d.type));
+
+  const legend = container.append("div").style("margin-top", "10px");
+
+  legend
+    .selectAll(".legend-item")
+    .data(totalEvents)
+    .enter()
+    .append("div")
+    .style("display", "flex")
+    .style("align-items", "center")
+    .style("margin-bottom", "5px")
+    .html(
+      (d) =>
+        `<div style="width:15px; height:15px; background:${color(
+          d.type
+        )}; margin-right:8px;"></div> ${d.type} (${d3.format(",")(d.value)})`
+    );
+}
