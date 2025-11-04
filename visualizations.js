@@ -74,6 +74,7 @@ Promise.all([
       createHeatmap();
       createStackedBarChart();
       createWaffleChart();
+      createChoroplethMap(); 
     }
   )
   .catch((error) => {
