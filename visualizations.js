@@ -22,74 +22,6 @@ function parseNum(d, key) {
   return isNaN(val) ? 0 : val;
 }
 
-// Load all CSV data files
-Promise.all([
-  d3.csv(
-    "data/number_of_reported_fatalities_by_country-year_as-of-24Oct2025_0.csv",
-    (d) => ({
-      country: d.COUNTRY,
-      year: +d.YEAR,
-      fatalities: parseNum(d, "FATALITIES"),
-    })
-  ),
-  d3.csv(
-    "data/number_of_reported_civilian_fatalities_by_country-year_as-of-24Oct2025_0.csv",
-    (d) => ({
-      country: d.COUNTRY,
-      year: +d.YEAR,
-      fatalities: parseNum(d, "FATALITIES"),
-    })
-  ),
-  d3.csv(
-    "data/number_of_events_targeting_civilians_by_country-year_as-of-24Oct2025_0.csv",
-    (d) => ({
-      country: d.COUNTRY,
-      year: +d.YEAR,
-      events: parseNum(d, "EVENTS"),
-    })
-  ),
-  d3.csv(
-    "data/number_of_demonstration_events_by_country-year_as-of-24Oct2025_0.csv",
-    (d) => ({
-      country: d.COUNTRY,
-      year: +d.YEAR,
-      events: parseNum(d, "EVENTS"),
-    })
-  ),
-])
-  .then(
-    ([
-      fatalities,
-      civilianFatalities,
-      eventsTargetingCivilians,
-      demonstrationEvents,
-    ]) => {
-      loadedData.fatalities = fatalities;
-      loadedData.civilianFatalities = civilianFatalities;
-      loadedData.eventsTargetingCivilians = eventsTargetingCivilians;
-      loadedData.demonstrationEvents = demonstrationEvents;
-
-      // Create all visualizations once data is loaded
-      createBarChart();
-      createGroupedBarChart();
-      createHeatmap();
-      createStackedBarChart();
-      createWaffleChart();
-
-    }
-  )
-  .catch((error) => {
-    console.error("Error loading data:", error);
-    // Fallback to empty visualizations or error message
-    d3.select("body")
-      .append("div")
-      .style("padding", "20px")
-      .style("color", "red")
-      .html(
-        "(1) Error loading data files. Please ensure all CSV files are available in the data folder."
-      );
-  });
-
 // 1. Bar Chart - Top countries by total fatalities
 function createBarChart() {
   if (!loadedData.fatalities) return;
@@ -110,14 +42,12 @@ function createBarChart() {
     .append("g")
     .attr("transform", `translate(${margin.left},${margin.top})`);
 
-  // Aggregate fatalities by country (sum across all years)
   const countryTotals = d3.rollup(
     loadedData.fatalities,
     (v) => d3.sum(v, (d) => d.fatalities),
     (d) => d.country
   );
 
-  // Convert to array and sort, take top 10
   const data = Array.from(countryTotals, ([country, fatalities]) => ({
     country,
     fatalities,
@@ -139,7 +69,6 @@ function createBarChart() {
 
   const tooltip = container.append("div").attr("class", "tooltip");
 
-  // Bars
   g.selectAll(".bar")
     .data(data)
     .enter()
@@ -160,7 +89,6 @@ function createBarChart() {
       tooltip.classed("visible", false);
     });
 
-  // X axis
   g.append("g")
     .attr("class", "axis")
     .attr("transform", `translate(0,${height})`)
@@ -169,12 +97,10 @@ function createBarChart() {
     .attr("transform", "rotate(-45)")
     .style("text-anchor", "end");
 
-  // Y axis
   g.append("g")
     .attr("class", "axis")
     .call(d3.axisLeft(yScale).tickFormat(d3.format(".2s")));
 
-  // Labels
   g.append("text")
     .attr("class", "axis-label")
     .attr("transform", "rotate(-90)")
@@ -211,7 +137,6 @@ function createGroupedBarChart() {
     .append("g")
     .attr("transform", `translate(${margin.left},${margin.top})`);
 
-  // Aggregate by year
   const totalByYear = d3.rollup(
     loadedData.fatalities,
     (v) => d3.sum(v, (d) => d.fatalities),
@@ -224,7 +149,6 @@ function createGroupedBarChart() {
     (d) => d.year
   );
 
-  // Combine and filter recent years (2018-2024)
   const years = Array.from(
     new Set([...totalByYear.keys(), ...civilianByYear.keys()])
   )
@@ -237,7 +161,6 @@ function createGroupedBarChart() {
     total: totalByYear.get(year) || 0,
   }));
 
-  // Calculate combatant (total - civilian)
   data.forEach((d) => {
     d.combatant = d.total - d.civilian;
   });
@@ -263,7 +186,6 @@ function createGroupedBarChart() {
 
   const tooltip = container.append("div").attr("class", "tooltip");
 
-  // Bars
   g.selectAll("g.group")
     .data(data)
     .enter()
@@ -290,18 +212,15 @@ function createGroupedBarChart() {
       tooltip.classed("visible", false);
     });
 
-  // X axis
   g.append("g")
     .attr("class", "axis")
     .attr("transform", `translate(0,${height})`)
     .call(d3.axisBottom(xScale));
 
-  // Y axis
   g.append("g")
     .attr("class", "axis")
     .call(d3.axisLeft(yScale).tickFormat(d3.format(".2s")));
 
-  // Labels
   g.append("text")
     .attr("class", "axis-label")
     .attr("transform", "rotate(-90)")
@@ -317,7 +236,6 @@ function createGroupedBarChart() {
     .attr("text-anchor", "middle")
     .text("Year");
 
-  // Legend
   const legend = g
     .append("g")
     .attr("class", "legend")
@@ -362,8 +280,6 @@ function createHeatmap() {
     .append("g")
     .attr("transform", `translate(${margin.left},${margin.top})`);
 
-  // Group by region (using top countries as regions) and year
-  // For simplicity, we'll aggregate by year and show top regions
   const regionGroups = {
     "Middle East & Asia": [
       "Afghanistan",
@@ -386,7 +302,6 @@ function createHeatmap() {
     Americas: ["Colombia", "Mexico", "Haiti", "Venezuela"],
   };
 
-  // Aggregate data by region and year
   const regionYearData = {};
   Object.keys(regionGroups).forEach((region) => {
     regionYearData[region] = {};
@@ -403,7 +318,6 @@ function createHeatmap() {
     });
   });
 
-  // Get years (2018-2024)
   const years = [2018, 2019, 2020, 2021, 2022, 2023, 2024];
   const regions = Object.keys(regionGroups);
 
@@ -426,7 +340,6 @@ function createHeatmap() {
 
   const tooltip = container.append("div").attr("class", "tooltip");
 
-  // Cells
   regions.forEach((region) => {
     years.forEach((year) => {
       const value = regionYearData[region][year] || 0;
@@ -448,10 +361,8 @@ function createHeatmap() {
           tooltip.classed("visible", false);
         });
 
-      // Use inline fill for continuous color scale (required for heatmap)
       cell.style("fill", colorScale(value));
 
-      // Value labels
       if (value > 0) {
         g.append("text")
           .attr("class", "axis")
@@ -466,16 +377,13 @@ function createHeatmap() {
     });
   });
 
-  // X axis
   g.append("g")
     .attr("class", "axis")
     .attr("transform", `translate(0,${height})`)
     .call(d3.axisBottom(xScale));
 
-  // Y axis
   g.append("g").attr("class", "axis").call(d3.axisLeft(yScale));
 
-  // Labels
   g.append("text")
     .attr("class", "axis-label")
     .attr("x", width / 2)
@@ -513,7 +421,6 @@ function createStackedBarChart() {
     .append("g")
     .attr("transform", `translate(${margin.left},${margin.top})`);
 
-  // Use same regions as heatmap
   const regionGroups = {
     "Middle East & Asia": [
       "Afghanistan",
@@ -536,7 +443,6 @@ function createStackedBarChart() {
     Americas: ["Colombia", "Mexico", "Haiti", "Venezuela"],
   };
 
-  // Aggregate events by region
   const regionData = [];
   Object.keys(regionGroups).forEach((region) => {
     const countries = regionGroups[region];
@@ -559,7 +465,6 @@ function createStackedBarChart() {
       }
     });
 
-    // Calculate total fatalities for this region as "other"
     let other = 0;
     loadedData.fatalities.forEach((d) => {
       if (
@@ -569,7 +474,6 @@ function createStackedBarChart() {
       }
     });
 
-    // Normalize other to be proportional to events (simplified)
     other = Math.min(other / 100, targetingCivilians + demonstrations);
 
     regionData.push({
@@ -587,7 +491,6 @@ function createStackedBarChart() {
     other: "Other Events",
   };
 
-  // Convert to percentages
   const stackedData = regionData.map((d) => {
     const total = keys.reduce((sum, key) => sum + d[key], 0);
     const percentages = {};
@@ -612,7 +515,6 @@ function createStackedBarChart() {
 
   const series = stack(stackedData);
 
-  // Create bars
   g.selectAll("g.series")
     .data(series)
     .enter()
@@ -639,7 +541,6 @@ function createStackedBarChart() {
       tooltip.classed("visible", false);
     });
 
-  // X axis
   g.append("g")
     .attr("class", "axis")
     .attr("transform", `translate(0,${height})`)
@@ -648,12 +549,10 @@ function createStackedBarChart() {
     .attr("transform", "rotate(-15)")
     .style("text-anchor", "end");
 
-  // Y axis
   g.append("g")
     .attr("class", "axis")
     .call(d3.axisLeft(yScale).tickFormat((d) => d + "%"));
 
-  // Labels
   g.append("text")
     .attr("class", "axis-label")
     .attr("transform", "rotate(-90)")
@@ -669,7 +568,6 @@ function createStackedBarChart() {
     .attr("text-anchor", "middle")
     .text("Region");
 
-  // Legend
   const legend = g
     .append("g")
     .attr("class", "legend")
@@ -688,11 +586,13 @@ function createStackedBarChart() {
 
     legendRow.append("text").attr("x", 20).attr("y", 12).text(keyLabels[key]);
   });
+}
 
-  function createWaffleChart() {
-    if (!loadedData.eventsTargetingCivilians || !loadedData.demonstrationEvents)
+// 5. Waffle Chart
+function createWaffleChart() {
+  if (!loadedData.eventsTargetingCivilians || !loadedData.demonstrationEvents)
     return;
-  // Combine the two event types you have
+
   const totalEvents = [
     {
       type: "Events targeting civilians",
@@ -706,71 +606,27 @@ function createStackedBarChart() {
 
   const total = d3.sum(totalEvents, (d) => d.value);
 
-  // Define waffle grid size
-  const numSquares = 100; // total squares in waffle (10x10)
+  const numSquares = 100;
   const squareSize = 20;
   const cols = 10;
   const rows = numSquares / cols;
 
-  // Compute number of squares per category
   const waffleData = [];
   totalEvents.forEach((d) => {
     d.units = Math.round((d.value / total) * numSquares);
     for (let i = 0; i < d.units; i++) {
-      waffleData.push({
-        type: d.type,
-      });
+      waffleData.push({ type: d.type });
     }
   });
 
-  // Set up SVG
   const width = cols * squareSize;
   const height = rows * squareSize;
+
+  d3.select("#waffleChart").html("");
 
   const svg = d3
     .select("#waffleChart")
     .append("svg")
     .attr("width", width)
     .attr("height", height)
-    .style("font-family", "sans-serif");
-
-  const color = d3
-    .scaleOrdinal()
-    .domain(totalEvents.map((d) => d.type))
-    .range(["#d1495b", "#edae49"]);
-
-  // Draw squares
-  svg
-    .selectAll("rect")
-    .data(waffleData)
-    .enter()
-    .append("rect")
-    .attr("x", (_, i) => (i % cols) * squareSize)
-    .attr("y", (_, i) => Math.floor(i / cols) * squareSize)
-    .attr("width", squareSize - 2)
-    .attr("height", squareSize - 2)
-    .attr("fill", (d) => color(d.type));
-
-  // Add legend
-  const legend = d3
-    .select("#waffleChart")
-    .append("div")
-    .style("margin-top", "10px");
-
-  legend
-    .selectAll(".legend-item")
-    .data(totalEvents)
-    .enter()
-    .append("div")
-    .style("display", "flex")
-    .style("align-items", "center")
-    .style("margin-bottom", "5px")
-    .html(
-      (d) =>
-        `<div style="width:15px; height:15px; background:${color(
-          d.type
-        )}; margin-right:8px;"></div> ${d.type} (${d3.format(",")(d.value)})`
-    );
-}
-
-}
+    .style("
