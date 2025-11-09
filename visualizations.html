@@ -12,8 +12,9 @@
     <style>
       .page-index{position:sticky;top:0;z-index:10;background:#fff;border-bottom:1px solid #e5e7eb}
       .page-index .container{max-width:1100px;margin:0 auto;padding:10px 16px;display:flex;gap:12px;flex-wrap:wrap}
-      .page-index a{font-family:"Fira Sans",system-ui,sans-serif;text-decoration:none;color:#1f2937;padding:6px 10px;border-radius:8px;border:1px solid #e5e7eb}
+      .page-index a{font-family:"Fira Sans",system-ui,sans-serif;text-decoration:none;color:#1f2937;padding:8px 12px;border-radius:10px;border:1px solid #e5e7eb}
       .page-index a:hover{background:#f3f4f6}
+      .active-link{background:#111827;color:#fff;border-color:#111827}
       details.section{max-width:1100px;margin:18px auto;padding:0 16px;border-radius:14px;border:1px solid #e5e7eb;background:#fff}
       details.section[open]{box-shadow:0 2px 10px rgba(0,0,0,.04)}
       details.section summary{list-style:none;cursor:pointer;padding:18px}
@@ -24,9 +25,10 @@
       .chart-section{margin:18px 0}
       .chart-section h3{font-family:"Roboto Slab",serif;margin-bottom:6px}
       .chart-section p{margin:0 0 10px 0;color:#374151}
-      .chart-container{height:360px;border:1px solid #e5e7eb;border-radius:10px;background:#fafafa}
+      .chart-container{border:1px solid #e5e7eb;border-radius:10px;background:#fafafa}
+      #choropleth-map{height:520px;overflow:hidden}
+      #choropleth-map svg{width:100%!important;height:100%!important;max-width:none!important;max-height:none!important}
       .chart-subsection{margin:22px 0}
-      .active-link{background:#111827;color:#fff;border-color:#111827}
       html{scroll-behavior:smooth}
     </style>
   </head>
@@ -45,16 +47,7 @@
     <nav class="page-index" aria-label="On this page">
       <div class="container">
         <a href="#section-comparisons">Section 1 — Comparisons</a>
-        <a href="#bar-chart-section">Top Countries by Total Fatalities</a>
-        <a href="#grouped-bar-chart-section">Civilian vs Combatant by Year</a>
-        <a href="#heatmap-section">Events Targeting Civilians</a>
-        <a href="#stacked-bar-section">Event Types by Region</a>
-        <a href="#waffle-section">Distribution of Event Types</a>
-        <a href="#choropleth-section">Geographic Distribution</a>
         <a href="#section-distributions">Section 2 — Distributions</a>
-        <a href="#histogram-subsection">Histogram</a>
-        <a href="#violin-subsection">Violin</a>
-        <a href="#boxplot-subsection">Boxplot</a>
       </div>
     </nav>
 
@@ -71,31 +64,31 @@
           <section id="bar-chart-section" class="chart-section">
             <h3>Top Countries by Total Fatalities</h3>
             <p>Top 10 countries with the highest total reported fatalities across all years.</p>
-            <div id="bar-chart" class="chart-container"></div>
+            <div id="bar-chart" class="chart-container" style="height:420px"></div>
           </section>
 
           <section id="grouped-bar-chart-section" class="chart-section">
             <h3>Civilian vs Combatant Fatalities by Year</h3>
             <p>Civilian and combatant fatalities from 2018 to 2024.</p>
-            <div id="grouped-bar-chart" class="chart-container"></div>
+            <div id="grouped-bar-chart" class="chart-container" style="height:420px"></div>
           </section>
 
           <section id="heatmap-section" class="chart-section">
             <h3>Events Targeting Civilians by Region and Year</h3>
             <p>Intensity of events targeting civilians by region and year.</p>
-            <div id="heatmap" class="chart-container"></div>
+            <div id="heatmap" class="chart-container" style="height:520px"></div>
           </section>
 
           <section id="stacked-bar-section" class="chart-section">
             <h3>Distribution of Event Types by Region</h3>
             <p>Proportional breakdown of different event types by region.</p>
-            <div id="stacked-bar-chart" class="chart-container"></div>
+            <div id="stacked-bar-chart" class="chart-container" style="height:420px"></div>
           </section>
 
           <section id="waffle-section" class="chart-section">
             <h3>Distribution of Event Types</h3>
             <p>Most recorded political events are demonstrations rather than direct attacks on civilians.</p>
-            <div id="waffle-chart" class="chart-container"></div>
+            <div id="waffle-chart" class="chart-container" style="height:360px"></div>
           </section>
 
           <section id="choropleth-section" class="chart-section">
@@ -115,19 +108,19 @@
           <section id="histogram-subsection" class="chart-subsection">
             <h3>Histogram of Event Fatalities</h3>
             <p>Distribution of event-level fatality counts. A population pyramid can be used as an alternative.</p>
-            <div id="histogram-chart" class="chart-container"></div>
+            <div id="histogram-chart" class="chart-container" style="height:380px"></div>
           </section>
 
           <section id="violin-subsection" class="chart-subsection">
             <h3>Violin Plot of Fatalities by Region</h3>
             <p>Density and spread of event fatalities across regions. A ridgeline plot can be used as an alternative.</p>
-            <div id="violin-plot" class="chart-container"></div>
+            <div id="violin-plot" class="chart-container" style="height:380px"></div>
           </section>
 
           <section id="boxplot-subsection" class="chart-subsection">
             <h3>Boxplot of Fatalities by Year</h3>
             <p>Median, quartiles, and outliers for event fatalities across years.</p>
-            <div id="box-plot" class="chart-container"></div>
+            <div id="box-plot" class="chart-container" style="height:380px"></div>
           </section>
         </div>
       </details>
@@ -140,23 +133,17 @@
     <script>
       document.getElementById("footer-year").textContent = new Date().getFullYear();
       const links=[...document.querySelectorAll(".page-index a")];
-      const sections=[...document.querySelectorAll("section.chart-section, section.chart-subsection, details.section")];
-      const ids=sections.map(s=>s.id||s.querySelector("section,div,h2,h3")?.id).filter(Boolean);
-      const map=new Map(links.map(a=>[a.getAttribute("href").replace("#",""),a]));
-      const observer=new IntersectionObserver(entries=>{
+      const targets=links.map(a=>document.querySelector(a.getAttribute("href")));
+      const obs=new IntersectionObserver(entries=>{
         entries.forEach(e=>{
           if(e.isIntersecting){
-            const id=e.target.id;
             links.forEach(l=>l.classList.remove("active-link"));
-            const a=map.get(id);
-            if(a) a.classList.add("active-link");
+            const i=targets.indexOf(e.target);
+            if(i>=0) links[i].classList.add("active-link");
           }
         });
       },{rootMargin:"-50% 0px -40% 0px",threshold:[0,1]});
-      ids.forEach(id=>{
-        const el=document.getElementById(id);
-        if(el) observer.observe(el);
-      });
+      targets.forEach(t=>t&&obs.observe(t));
       document.querySelectorAll('.page-index a[href^="#"]').forEach(a=>{
         a.addEventListener("click",e=>{
           const id=a.getAttribute("href").slice(1);
