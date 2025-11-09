@@ -6,12 +6,29 @@
     <title>Visualizations</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Fira+Sans:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Roboto+Slab:wght@100..900&display=swap"
-      rel="stylesheet"
-    />
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Sans:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Roboto+Slab:wght@100..900&display=swap" rel="stylesheet"/>
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <link rel="stylesheet" href="index.css" />
+    <style>
+      .page-index{position:sticky;top:0;z-index:10;background:#fff;border-bottom:1px solid #e5e7eb}
+      .page-index .container{max-width:1100px;margin:0 auto;padding:10px 16px;display:flex;gap:12px;flex-wrap:wrap}
+      .page-index a{font-family:"Fira Sans",system-ui,sans-serif;text-decoration:none;color:#1f2937;padding:6px 10px;border-radius:8px;border:1px solid #e5e7eb}
+      .page-index a:hover{background:#f3f4f6}
+      details.section{max-width:1100px;margin:18px auto;padding:0 16px;border-radius:14px;border:1px solid #e5e7eb;background:#fff}
+      details.section[open]{box-shadow:0 2px 10px rgba(0,0,0,.04)}
+      details.section summary{list-style:none;cursor:pointer;padding:18px}
+      details.section summary::-webkit-details-marker{display:none}
+      details.section h2{margin:0;font-family:"Roboto Slab",serif}
+      .section-subtitle{margin:6px 0 0 0;color:#4b5563;font-weight:600}
+      .section-body{padding:0 18px 18px 18px}
+      .chart-section{margin:18px 0}
+      .chart-section h3{font-family:"Roboto Slab",serif;margin-bottom:6px}
+      .chart-section p{margin:0 0 10px 0;color:#374151}
+      .chart-container{height:360px;border:1px solid #e5e7eb;border-radius:10px;background:#fafafa}
+      .chart-subsection{margin:22px 0}
+      .active-link{background:#111827;color:#fff;border-color:#111827}
+      html{scroll-behavior:smooth}
+    </style>
   </head>
 
   <body>
@@ -25,138 +42,130 @@
       <p>Exploring Conflict Data Through Interactive Charts</p>
     </div>
 
+    <nav class="page-index" aria-label="On this page">
+      <div class="container">
+        <a href="#section-comparisons">Section 1 — Comparisons</a>
+        <a href="#bar-chart-section">Top Countries by Total Fatalities</a>
+        <a href="#grouped-bar-chart-section">Civilian vs Combatant by Year</a>
+        <a href="#heatmap-section">Events Targeting Civilians</a>
+        <a href="#stacked-bar-section">Event Types by Region</a>
+        <a href="#waffle-section">Distribution of Event Types</a>
+        <a href="#choropleth-section">Geographic Distribution</a>
+        <a href="#section-distributions">Section 2 — Distributions</a>
+        <a href="#histogram-subsection">Histogram</a>
+        <a href="#violin-subsection">Violin</a>
+        <a href="#boxplot-subsection">Boxplot</a>
+      </div>
+    </nav>
+
     <div class="introduction">
       <h2>Interactive Data Exploration</h2>
-      <p>
-        This page presents a comprehensive set of visualizations examining
-        conflict and human suffering data. Use the interactive features to
-        explore the data in detail.
-      </p>
+      <p>This page presents a comprehensive set of visualizations examining conflict and human suffering data. Use the interactive features to explore the data in detail.</p>
 
-      <!-- ========================= -->
-      <!-- SECTION 1: COMPARISONS   -->
-      <!-- ========================= -->
-      <section id="section-comparisons" class="chart-section">
-        <h2>Section 1 — Comparisons</h2>
-        <h4>Comparing categories across countries, years, and regions</h4>
-        <p>
-          In this section we use classic comparison-oriented charts (bars,
-          grouped bars, heatmaps) to contrast categories and time periods,
-          highlighting where and when civilians and combatants are impacted most.
-        </p>
-      </section>
+      <details id="section-comparisons" class="section" open>
+        <summary>
+          <h2>Section 1 — Comparisons</h2>
+          <p class="section-subtitle">Comparing categories across countries, years, and regions</p>
+        </summary>
+        <div class="section-body">
+          <section id="bar-chart-section" class="chart-section">
+            <h3>Top Countries by Total Fatalities</h3>
+            <p>Top 10 countries with the highest total reported fatalities across all years.</p>
+            <div id="bar-chart" class="chart-container"></div>
+          </section>
 
-      <!-- Bar Chart (Comparison) -->
-      <section class="chart-section">
-        <h3>Top Countries by Total Fatalities</h3>
-        <p>
-          Top 10 countries with the highest total reported fatalities across all years.
-        </p>
-        <div id="bar-chart" class="chart-container"></div>
-      </section>
+          <section id="grouped-bar-chart-section" class="chart-section">
+            <h3>Civilian vs Combatant Fatalities by Year</h3>
+            <p>Civilian and combatant fatalities from 2018 to 2024.</p>
+            <div id="grouped-bar-chart" class="chart-container"></div>
+          </section>
 
-      <!-- Grouped Bar Chart (Comparison) -->
-      <section class="chart-section">
-        <h3>Civilian vs Combatant Fatalities by Year</h3>
-        <p>
-          Civilian and combatant fatalities (2018–2024). Combatants are
-          approximated as total minus civilian fatalities.
-        </p>
-        <div id="grouped-bar-chart" class="chart-container"></div>
-      </section>
+          <section id="heatmap-section" class="chart-section">
+            <h3>Events Targeting Civilians by Region and Year</h3>
+            <p>Intensity of events targeting civilians by region and year.</p>
+            <div id="heatmap" class="chart-container"></div>
+          </section>
 
-      <!-- Heatmap (Comparison) -->
-      <section class="chart-section">
-        <h3>Events Targeting Civilians by Region and Year</h3>
-        <p>
-          Intensity of events targeting civilians by region (Middle East &amp; Asia,
-          Africa, Europe, Americas) and year (2018–2024).
-        </p>
-        <div id="heatmap" class="chart-container"></div>
-      </section>
+          <section id="stacked-bar-section" class="chart-section">
+            <h3>Distribution of Event Types by Region</h3>
+            <p>Proportional breakdown of different event types by region.</p>
+            <div id="stacked-bar-chart" class="chart-container"></div>
+          </section>
 
-      <!-- (Optional) Keep these in comparisons if you like -->
-      <section class="chart-section">
-        <h3>Distribution of Event Types by Region</h3>
-        <p>
-          100% stacked bars show each region’s mix of event types (targets
-          on civilians, demonstrations, other).
-        </p>
-        <div id="stacked-bar-chart" class="chart-container"></div>
-      </section>
+          <section id="waffle-section" class="chart-section">
+            <h3>Distribution of Event Types</h3>
+            <p>Most recorded political events are demonstrations rather than direct attacks on civilians.</p>
+            <div id="waffle-chart" class="chart-container"></div>
+          </section>
 
-      <section class="chart-section">
-        <h3>Distribution of Event Types</h3>
-        <p>
-          Most recorded political events are demonstrations rather than direct
-          attacks on civilians.
-        </p>
-        <div id="waffle-chart" class="chart-container"></div>
-      </section>
+          <section id="choropleth-section" class="chart-section">
+            <h3>Geographic Distribution of Conflicts</h3>
+            <p>Countries shaded by the total number of conflict events affecting civilians.</p>
+            <div id="choropleth-map" class="chart-container"></div>
+          </section>
+        </div>
+      </details>
 
-      <section class="chart-section">
-        <h3>Geographic Distribution of Conflicts</h3>
-        <p>
-          Countries shaded by the total number of conflict events affecting civilians
-          (events targeting civilians + demonstrations).
-        </p>
-        <div id="choropleth-map" class="chart-container"></div>
-      </section>
+      <details id="section-distributions" class="section">
+        <summary>
+          <h2>Section 2 — Distributions</h2>
+          <p class="section-subtitle">How values spread: histograms, violin/ridgeline, and boxplots</p>
+        </summary>
+        <div class="section-body">
+          <section id="histogram-subsection" class="chart-subsection">
+            <h3>Histogram of Event Fatalities</h3>
+            <p>Distribution of event-level fatality counts. A population pyramid can be used as an alternative.</p>
+            <div id="histogram-chart" class="chart-container"></div>
+          </section>
 
-      <!-- ============================================= -->
-      <!-- SECTION 2: DISTRIBUTIONS (LAST ELEMENT)       -->
-      <!-- ============================================= -->
-      <section id="section-distributions" class="chart-section">
-        <h2>Section 2 — Distributions</h2>
-        <h4>How values spread: histograms, violin/ridgeline, and boxplots</h4>
-        <p>
-          This section focuses on the <em>shape</em> and <em>spread</em> of the data.
-          You’ll see one histogram (a population pyramid also works), one violin plot
-          (ridgeline also works), and one boxplot.
-        </p>
+          <section id="violin-subsection" class="chart-subsection">
+            <h3>Violin Plot of Fatalities by Region</h3>
+            <p>Density and spread of event fatalities across regions. A ridgeline plot can be used as an alternative.</p>
+            <div id="violin-plot" class="chart-container"></div>
+          </section>
 
-        <!-- Histogram / Pyramid -->
-        <section class="chart-subsection">
-          <h3>Histogram of Event Magnitudes</h3>
-          <p>
-            Distribution of event-level fatality counts. For a demographic split,
-            this can be rendered as a population pyramid.
-          </p>
-          <div id="histogram-chart" class="chart-container"></div>
-          <!-- Optional alternative container if you prefer to render a pyramid -->
-          <div id="pyramid-chart" class="chart-container" style="display:none;"></div>
-        </section>
-
-        <!-- Violin / Ridgeline -->
-        <section class="chart-subsection">
-          <h3>Violin Plot of Fatalities by Region</h3>
-          <p>
-            Density and spread of event fatalities across regions. A ridgeline plot
-            can be used as an alternative to show overlapping distributions by year.
-          </p>
-          <div id="violin-plot" class="chart-container"></div>
-          <!-- Optional alternative container -->
-          <div id="ridgeline-plot" class="chart-container" style="display:none;"></div>
-        </section>
-
-        <!-- Boxplot -->
-        <section class="chart-subsection">
-          <h3>Boxplot of Fatalities by Year</h3>
-          <p>
-            Median, quartiles, and outliers for event fatalities across years.
-          </p>
-          <div id="box-plot" class="chart-container"></div>
-        </section>
-      </section>
-      <!-- END: SECTION 2 (keep this the last major content block) -->
+          <section id="boxplot-subsection" class="chart-subsection">
+            <h3>Boxplot of Fatalities by Year</h3>
+            <p>Median, quartiles, and outliers for event fatalities across years.</p>
+            <div id="box-plot" class="chart-container"></div>
+          </section>
+        </div>
+      </details>
     </div>
 
     <footer class="footer">
       <p>&copy; <span id="footer-year"></span> Vizionaries</p>
     </footer>
+
     <script>
-      document.getElementById("footer-year").textContent =
-        new Date().getFullYear();
+      document.getElementById("footer-year").textContent = new Date().getFullYear();
+      const links=[...document.querySelectorAll(".page-index a")];
+      const sections=[...document.querySelectorAll("section.chart-section, section.chart-subsection, details.section")];
+      const ids=sections.map(s=>s.id||s.querySelector("section,div,h2,h3")?.id).filter(Boolean);
+      const map=new Map(links.map(a=>[a.getAttribute("href").replace("#",""),a]));
+      const observer=new IntersectionObserver(entries=>{
+        entries.forEach(e=>{
+          if(e.isIntersecting){
+            const id=e.target.id;
+            links.forEach(l=>l.classList.remove("active-link"));
+            const a=map.get(id);
+            if(a) a.classList.add("active-link");
+          }
+        });
+      },{rootMargin:"-50% 0px -40% 0px",threshold:[0,1]});
+      ids.forEach(id=>{
+        const el=document.getElementById(id);
+        if(el) observer.observe(el);
+      });
+      document.querySelectorAll('.page-index a[href^="#"]').forEach(a=>{
+        a.addEventListener("click",e=>{
+          const id=a.getAttribute("href").slice(1);
+          const t=document.getElementById(id);
+          if(!t) return;
+          const host=t.closest("details.section");
+          if(host && !host.open) host.open=true;
+        });
+      });
     </script>
 
     <script src="visualizations.js"></script>
