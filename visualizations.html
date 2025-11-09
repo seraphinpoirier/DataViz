@@ -14,7 +14,7 @@
       .page-index .container{max-width:1100px;margin:0 auto;padding:10px 16px;display:flex;gap:12px;flex-wrap:wrap}
       .page-index a{font-family:"Fira Sans",system-ui,sans-serif;text-decoration:none;color:#1f2937;padding:8px 12px;border-radius:10px;border:1px solid #e5e7eb}
       .page-index a:hover{background:#f3f4f6}
-      .active-link {background: #1D4ED8; color: #ffffff; border-color: #1D4ED8}
+      .page-index a.active-link{background:#1D4ED8!important;color:#ffffff!important;border-color:#1D4ED8!important}
       details.section{max-width:1100px;margin:18px auto;padding:0 16px;border-radius:14px;border:1px solid #e5e7eb;background:#fff}
       details.section[open]{box-shadow:0 2px 10px rgba(0,0,0,.04)}
       details.section summary{list-style:none;cursor:pointer;padding:18px}
@@ -132,8 +132,17 @@
 
     <script>
       document.getElementById("footer-year").textContent = new Date().getFullYear();
+
       const links=[...document.querySelectorAll(".page-index a")];
       const targets=links.map(a=>document.querySelector(a.getAttribute("href")));
+
+      // set initial active on load
+      (function setInitialActive(){
+        links.forEach(l=>l.classList.remove("active-link"));
+        const idx = targets.findIndex(el => el && el.getBoundingClientRect().top >= 0);
+        (idx >= 0 ? links[idx] : links[0]).classList.add("active-link");
+      })();
+
       const obs=new IntersectionObserver(entries=>{
         entries.forEach(e=>{
           if(e.isIntersecting){
@@ -143,9 +152,11 @@
           }
         });
       },{rootMargin:"-50% 0px -40% 0px",threshold:[0,1]});
+
       targets.forEach(t=>t&&obs.observe(t));
+
       document.querySelectorAll('.page-index a[href^="#"]').forEach(a=>{
-        a.addEventListener("click",e=>{
+        a.addEventListener("click",()=>{
           const id=a.getAttribute("href").slice(1);
           const t=document.getElementById(id);
           if(!t) return;
