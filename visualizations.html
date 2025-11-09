@@ -29,10 +29,8 @@
       <h2>Interactive Data Exploration</h2>
       <p>
         This page presents a comprehensive set of visualizations examining
-        conflict and human suffering data. Each chart provides unique insights
-        into different aspects of violence, casualties, and their patterns
-        across time and geography. Use the interactive features to explore the
-        data in detail.
+        conflict and human suffering data. Use the interactive features to
+        explore the data in detail.
       </p>
 
       <!-- ========================= -->
@@ -40,93 +38,117 @@
       <!-- ========================= -->
       <section id="section-comparisons" class="chart-section">
         <h2>Section 1 — Comparisons</h2>
+        <h4>Comparing categories across countries, years, and regions</h4>
         <p>
-          Compare levels, trends, and patterns across countries, years, and regions.
-          These charts help you spot which places and periods are most affected and how
-          civilians and combatants are impacted differently.
+          In this section we use classic comparison-oriented charts (bars,
+          grouped bars, heatmaps) to contrast categories and time periods,
+          highlighting where and when civilians and combatants are impacted most.
         </p>
       </section>
 
-      <!-- Bar Chart Section (Comparison) -->
+      <!-- Bar Chart (Comparison) -->
       <section class="chart-section">
         <h3>Top Countries by Total Fatalities</h3>
         <p>
-          This bar chart displays the top 10 countries with the highest total
-          reported fatalities from conflicts, aggregated across all years in the
-          dataset. It helps identify which countries have experienced the most
-          severe human cost from political violence.
+          Top 10 countries with the highest total reported fatalities across all years.
         </p>
         <div id="bar-chart" class="chart-container"></div>
       </section>
 
-      <!-- Grouped Bar Chart Section (Comparison) -->
+      <!-- Grouped Bar Chart (Comparison) -->
       <section class="chart-section">
         <h3>Civilian vs Combatant Fatalities by Year</h3>
         <p>
-          The grouped bar chart compares reported civilian and combatant
-          fatalities over recent years (2018-2024), highlighting the
-          disproportionate impact of conflicts on civilian populations.
-          Combatant fatalities are calculated as the difference between total
-          and civilian fatalities.
+          Civilian and combatant fatalities (2018–2024). Combatants are
+          approximated as total minus civilian fatalities.
         </p>
         <div id="grouped-bar-chart" class="chart-container"></div>
       </section>
 
-      <!-- Heatmap Section (Comparison) -->
+      <!-- Heatmap (Comparison) -->
       <section class="chart-section">
         <h3>Events Targeting Civilians by Region and Year</h3>
         <p>
-          This heatmap visualizes the intensity of events targeting civilians
-          across different regions throughout recent years, revealing temporal
-          patterns and regional hotspots of violence against civilians. Data is
-          aggregated by region (Middle East &amp; Asia, Africa, Europe, Americas)
-          for the years 2018-2024.
+          Intensity of events targeting civilians by region (Middle East &amp; Asia,
+          Africa, Europe, Americas) and year (2018–2024).
         </p>
         <div id="heatmap" class="chart-container"></div>
       </section>
 
-      <!-- ============================= -->
-      <!-- SECTION 2: DISTRIBUTIONS      -->
-      <!-- ============================= -->
-      <section id="section-distributions" class="chart-section">
-        <h2>Section 2 — Distributions</h2>
-        <p>
-          Examine how different event types and geographies contribute to the overall
-          picture. These visuals focus on proportions and spread across categories and space.
-        </p>
-      </section>
-
-      <!-- 100% Stacked Bar Chart Section (Distributions) -->
+      <!-- (Optional) Keep these in comparisons if you like -->
       <section class="chart-section">
         <h3>Distribution of Event Types by Region</h3>
         <p>
-          The 100% stacked bar chart shows the proportional breakdown of
-          different event types within each region, including events targeting
-          civilians, demonstration events, and other conflict-related events.
-          This allows for relative comparisons across geographical areas to
-          understand the nature of violence in each region.
+          100% stacked bars show each region’s mix of event types (targets
+          on civilians, demonstrations, other).
         </p>
         <div id="stacked-bar-chart" class="chart-container"></div>
       </section>
 
-      <!-- Waffle chart Section (Distributions) -->
       <section class="chart-section">
         <h3>Distribution of Event Types</h3>
         <p>
-          Most recorded political events in the world are demonstrations, not direct attacks on civilians.
+          Most recorded political events are demonstrations rather than direct
+          attacks on civilians.
         </p>
         <div id="waffle-chart" class="chart-container"></div>
       </section>
 
-      <!-- Choropleth Map Section (Distributions) -->
       <section class="chart-section">
         <h3>Geographic Distribution of Conflicts</h3>
         <p>
-          Countries are shaded by the total number of conflict events affecting civilians
-          (events targeting civilians + demonstration events, summed across years).
+          Countries shaded by the total number of conflict events affecting civilians
+          (events targeting civilians + demonstrations).
         </p>
         <div id="choropleth-map" class="chart-container"></div>
       </section>
+
+      <!-- ============================================= -->
+      <!-- SECTION 2: DISTRIBUTIONS (LAST ELEMENT)       -->
+      <!-- ============================================= -->
+      <section id="section-distributions" class="chart-section">
+        <h2>Section 2 — Distributions</h2>
+        <h4>How values spread: histograms, violin/ridgeline, and boxplots</h4>
+        <p>
+          This section focuses on the <em>shape</em> and <em>spread</em> of the data.
+          You’ll see one histogram (a population pyramid also works), one violin plot
+          (ridgeline also works), and one boxplot.
+        </p>
+
+        <!-- Histogram / Pyramid -->
+        <section class="chart-subsection">
+          <h3>Histogram of Event Magnitudes</h3>
+          <p>
+            Distribution of event-level fatality counts. For a demographic split,
+            this can be rendered as a population pyramid.
+          </p>
+          <div id="histogram-chart" class="chart-container"></div>
+          <!-- Optional alternative container if you prefer to render a pyramid -->
+          <div id="pyramid-chart" class="chart-container" style="display:none;"></div>
+        </section>
+
+        <!-- Violin / Ridgeline -->
+        <section class="chart-subsection">
+          <h3>Violin Plot of Fatalities by Region</h3>
+          <p>
+            Density and spread of event fatalities across regions. A ridgeline plot
+            can be used as an alternative to show overlapping distributions by year.
+          </p>
+          <div id="violin-plot" class="chart-container"></div>
+          <!-- Optional alternative container -->
+          <div id="ridgeline-plot" class="chart-container" style="display:none;"></div>
+        </section>
+
+        <!-- Boxplot -->
+        <section class="chart-subsection">
+          <h3>Boxplot of Fatalities by Year</h3>
+          <p>
+            Median, quartiles, and outliers for event fatalities across years.
+          </p>
+          <div id="box-plot" class="chart-container"></div>
+        </section>
+      </section>
+      <!-- END: SECTION 2 (keep this the last major content block) -->
     </div>
 
     <footer class="footer">
