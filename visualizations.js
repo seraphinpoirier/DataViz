@@ -1,170 +1,902 @@
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width" />
-    <title>Visualizations</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Fira+Sans:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Roboto+Slab:wght@100..900&display=swap" rel="stylesheet"/>
-    <script src="https://d3js.org/d3.v7.min.js"></script>
-    <link rel="stylesheet" href="index.css" />
-    <style>
-      .page-index{position:sticky;top:0;z-index:10;background:#fff;border-bottom:1px solid #e5e7eb}
-      .page-index .container{max-width:1100px;margin:0 auto;padding:10px 16px;display:flex;gap:12px;flex-wrap:wrap}
-      .page-index a{font-family:"Fira Sans",system-ui,sans-serif;text-decoration:none;color:#1f2937;padding:8px 12px;border-radius:10px;border:1px solid #e5e7eb}
-      .page-index a:hover{background:#f3f4f6}
-      .page-index a.active-link{background:#1D4ED8!important;color:#ffffff!important;border-color:#1D4ED8!important}
-      details.section{max-width:1100px;margin:18px auto;padding:0 16px;border-radius:14px;border:1px solid #e5e7eb;background:#fff}
-      details.section[open]{box-shadow:0 2px 10px rgba(0,0,0,.04)}
-      details.section summary{list-style:none;cursor:pointer;padding:18px}
-      details.section summary::-webkit-details-marker{display:none}
-      details.section h2{margin:0;font-family:"Roboto Slab",serif}
-      .section-subtitle{margin:6px 0 0 0;color:#4b5563;font-weight:600}
-      .section-body{padding:0 18px 18px 18px}
-      .chart-section{margin:18px 0}
-      .chart-section h3{font-family:"Roboto Slab",serif;margin-bottom:6px}
-      .chart-section p{margin:0 0 10px 0;color:#374151}
-      .chart-container{border:1px solid #e5e7eb;border-radius:10px;background:#fafafa}
-      #choropleth-map{height:520px;overflow:hidden}
-      #choropleth-map svg{width:100%!important;height:100%!important;max-width:none!important;max-height:none!important}
-      .chart-subsection{margin:22px 0}
-      html{scroll-behavior:smooth}
-    </style>
-  </head>
+// Color scales
+const colors = {
+  primary: "#4a90e2",
+  secondary: "#e74c3c",
+  tertiary: "#2ecc71",
+  quaternary: "#f39c12",
+  quinary: "#9b59b6",
+  heatmap: d3.scaleSequential(d3.interpolateYlOrRd),
+};
 
-  <body>
-    <div class="topnav">
-      <a href="index.html">Home</a>
-      <a class="active" href="visualizations.html">Visualizations</a>
-    </div>
+// Data storage
+let loadedData = {
+  fatalities: null,
+  civilianFatalities: null,
+  eventsTargetingCivilians: null,
+  demonstrationEvents: null,
+};
 
-    <div class="header">
-      <h1>Data Visualizations</h1>
-      <p>Exploring Conflict Data Through Interactive Charts</p>
-    </div>
+// Helper function to parse numeric values
+function parseNum(d, key) {
+  const val = +d[key];
+  return isNaN(val) ? 0 : val;
+}
 
-    <nav class="page-index" aria-label="On this page">
-      <div class="container">
-        <a href="#section-comparisons">Section 1 — Comparisons</a>
-        <a href="#section-distributions">Section 2 — Distributions</a>
-      </div>
-    </nav>
+// Load all CSV data files
+Promise.all([
+  d3.csv(
+    "data/number_of_reported_fatalities_by_country-year_as-of-24Oct2025_0.csv",
+    (d) => ({
+      country: d.COUNTRY,
+      year: +d.YEAR,
+      fatalities: parseNum(d, "FATALITIES"),
+    })
+  ),
+  d3.csv(
+    "data/number_of_reported_civilian_fatalities_by_country-year_as-of-24Oct2025_0.csv",
+    (d) => ({
+      country: d.COUNTRY,
+      year: +d.YEAR,
+      fatalities: parseNum(d, "FATALITIES"),
+    })
+  ),
+  d3.csv(
+    "data/number_of_events_targeting_civilians_by_country-year_as-of-24Oct2025_0.csv",
+    (d) => ({
+      country: d.COUNTRY,
+      year: +d.YEAR,
+      events: parseNum(d, "EVENTS"),
+    })
+  ),
+  d3.csv(
+    "data/number_of_demonstration_events_by_country-year_as-of-24Oct2025_0.csv",
+    (d) => ({
+      country: d.COUNTRY,
+      year: +d.YEAR,
+      events: parseNum(d, "EVENTS"),
+    })
+  ),
+])
+  .then(
+    ([
+      fatalities,
+      civilianFatalities,
+      eventsTargetingCivilians,
+      demonstrationEvents,
+    ]) => {
+      loadedData.fatalities = fatalities;
+      loadedData.civilianFatalities = civilianFatalities;
+      loadedData.eventsTargetingCivilians = eventsTargetingCivilians;
+      loadedData.demonstrationEvents = demonstrationEvents;
 
-    <div class="introduction">
-      <h2>Interactive Data Exploration</h2>
-      <p>This page presents a comprehensive set of visualizations examining conflict and human suffering data. Use the interactive features to explore the data in detail.</p>
+      createBarChart();
+      createGroupedBarChart();
+      createHeatmap();
+      createStackedBarChart();
+      createWaffleChart();
+      createChoroplethMap(); 
+    }
+  )
+  .catch((error) => {
+    console.error("Error loading data:", error);
+    d3.select("body")
+      .append("div")
+      .style("padding", "20px")
+      .style("color", "red")
+      .html(
+        "(1) Error loading data files. Please ensure all CSV files are available in the data folder."
+      );
+  });
 
-      <details id="section-comparisons" class="section" open>
-        <summary>
-          <h2>Section 1 — Comparisons</h2>
-          <p class="section-subtitle">Comparing categories across countries, years, and regions</p>
-        </summary>
-        <div class="section-body">
-          <section id="bar-chart-section" class="chart-section">
-            <h3>Top Countries by Total Fatalities</h3>
-            <p>Top 10 countries with the highest total reported fatalities across all years.</p>
-            <div id="bar-chart" class="chart-container" style="height:420px"></div>
-          </section>
+// 1. Bar Chart - Top countries by total fatalities
+function createBarChart() {
+  if (!loadedData.fatalities) return;
 
-          <section id="grouped-bar-chart-section" class="chart-section">
-            <h3>Civilian vs Combatant Fatalities by Year</h3>
-            <p>Civilian and combatant fatalities from 2018 to 2024.</p>
-            <div id="grouped-bar-chart" class="chart-container" style="height:420px"></div>
-          </section>
+  const container = d3.select("#bar-chart");
+  const margin = { top: 40, right: 30, bottom: 60, left: 80 };
+  const width = 800 - margin.left - margin.right;
+  const height = 400 - margin.bottom - margin.top;
 
-          <section id="heatmap-section" class="chart-section">
-            <h3>Events Targeting Civilians by Region and Year</h3>
-            <p>Intensity of events targeting civilians by region and year.</p>
-            <div id="heatmap" class="chart-container" style="height:520px"></div>
-          </section>
+  container.html("");
 
-          <section id="stacked-bar-section" class="chart-section">
-            <h3>Distribution of Event Types by Region</h3>
-            <p>Proportional breakdown of different event types by region.</p>
-            <div id="stacked-bar-chart" class="chart-container" style="height:420px"></div>
-          </section>
+  const svg = container
+    .append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom);
 
-          <section id="waffle-section" class="chart-section">
-            <h3>Distribution of Event Types</h3>
-            <p>Most recorded political events are demonstrations rather than direct attacks on civilians.</p>
-            <div id="waffle-chart" class="chart-container" style="height:360px"></div>
-          </section>
+  const g = svg
+    .append("g")
+    .attr("transform", `translate(${margin.left},${margin.top})`);
 
-          <section id="choropleth-section" class="chart-section">
-            <h3>Geographic Distribution of Conflicts</h3>
-            <p>Countries shaded by the total number of conflict events affecting civilians.</p>
-            <div id="choropleth-map" class="chart-container"></div>
-          </section>
-        </div>
-      </details>
+  const countryTotals = d3.rollup(
+    loadedData.fatalities,
+    (v) => d3.sum(v, (d) => d.fatalities),
+    (d) => d.country
+  );
 
-      <details id="section-distributions" class="section">
-        <summary>
-          <h2>Section 2 — Distributions</h2>
-          <p class="section-subtitle">How values spread: histograms, ridgelines, and boxplots</p>
-        </summary>
-        <div class="section-body">
-          <section id="histogram-subsection" class="chart-subsection">
-            <h3>Histogram of Event Fatalities</h3>
-            <p>Distribution of event-level fatality counts. A population pyramid can be used as an alternative.</p>
-            <div id="histogram-chart" class="chart-container" style="height:380px"></div>
-          </section>
+  const data = Array.from(countryTotals, ([country, fatalities]) => ({
+    country,
+    fatalities,
+  }))
+    .sort((a, b) => b.fatalities - a.fatalities)
+    .slice(0, 10);
 
-          <section id="ridgeline-subsection" class="chart-subsection">
-            <h3>Ridgeline Plot of Fatalities by Region</h3>
-            <p>Overlapping density curves showing the distribution of event fatalities across regions.</p>
-            <div id="ridgeline-plot" class="chart-container" style="height:380px"></div>
-          </section>
+  const xScale = d3
+    .scaleBand()
+    .domain(data.map((d) => d.country))
+    .range([0, width])
+    .padding(0.2);
 
-          <section id="boxplot-subsection" class="chart-subsection">
-            <h3>Boxplot of Fatalities by Year</h3>
-            <p>Median, quartiles, and outliers for event fatalities across years.</p>
-            <div id="box-plot" class="chart-container" style="height:380px"></div>
-          </section>
-        </div>
-      </details>
-    </div>
+  const yScale = d3
+    .scaleLinear()
+    .domain([0, d3.max(data, (d) => d.fatalities)])
+    .nice()
+    .range([height, 0]);
 
-    <footer class="footer">
-      <p>&copy; <span id="footer-year"></span> Vizionaries</p>
-    </footer>
+  const tooltip = container.append("div").attr("class", "tooltip");
 
-    <script>
-      document.getElementById("footer-year").textContent = new Date().getFullYear();
+  g.selectAll(".bar")
+    .data(data)
+    .enter()
+    .append("rect")
+    .attr("class", "bar")
+    .attr("x", (d) => xScale(d.country))
+    .attr("y", (d) => yScale(d.fatalities))
+    .attr("width", xScale.bandwidth())
+    .attr("height", (d) => height - yScale(d.fatalities))
+    .on("mouseover", function (event, d) {
+      tooltip
+        .classed("visible", true)
+        .style("left", event.pageX + 10 + "px")
+        .style("top", event.pageY - 10 + "px")
+        .html(`${d.country}<br>Fatalities: ${d.fatalities.toLocaleString()}`);
+    })
+    .on("mouseout", function () {
+      tooltip.classed("visible", false);
+    });
 
-      const links=[...document.querySelectorAll(".page-index a")];
-      const targets=links.map(a=>document.querySelector(a.getAttribute("href")));
+  g.append("g")
+    .attr("class", "axis")
+    .attr("transform", `translate(0,${height})`)
+    .call(d3.axisBottom(xScale))
+    .selectAll("text")
+    .attr("transform", "rotate(-45)")
+    .style("text-anchor", "end");
 
-      (function setInitialActive(){
-        links.forEach(l=>l.classList.remove("active-link"));
-        const idx = targets.findIndex(el => el && el.getBoundingClientRect().top >= 0);
-        (idx >= 0 ? links[idx] : links[0]).classList.add("active-link");
-      })();
+  g.append("g")
+    .attr("class", "axis")
+    .call(d3.axisLeft(yScale).tickFormat(d3.format(".2s")));
 
-      const obs=new IntersectionObserver(entries=>{
-        entries.forEach(e=>{
-          if(e.isIntersecting){
-            links.forEach(l=>l.classList.remove("active-link"));
-            const i=targets.indexOf(e.target);
-            if(i>=0) links[i].classList.add("active-link");
-          }
+  g.append("text")
+    .attr("class", "axis-label")
+    .attr("transform", "rotate(-90)")
+    .attr("y", -50)
+    .attr("x", -height / 2)
+    .attr("text-anchor", "middle")
+    .text("Fatalities");
+
+  g.append("text")
+    .attr("class", "axis-label")
+    .attr("x", width / 2)
+    .attr("y", height + 50)
+    .attr("text-anchor", "middle")
+    .text("Country");
+}
+
+// 2. Grouped Bar Chart - Civilian vs Total Fatalities by Year
+function createGroupedBarChart() {
+  if (!loadedData.fatalities || !loadedData.civilianFatalities) return;
+
+  const container = d3.select("#grouped-bar-chart");
+  const margin = { top: 40, right: 180, bottom: 60, left: 80 };
+  const width = 800 - margin.left - margin.right;
+  const height = 400 - margin.bottom - margin.top;
+
+  container.html("");
+
+  const svg = container
+    .append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom);
+
+  const g = svg
+    .append("g")
+    .attr("transform", `translate(${margin.left},${margin.top})`);
+
+  const totalByYear = d3.rollup(
+    loadedData.fatalities,
+    (v) => d3.sum(v, (d) => d.fatalities),
+    (d) => d.year
+  );
+
+  const civilianByYear = d3.rollup(
+    loadedData.civilianFatalities,
+    (v) => d3.sum(v, (d) => d.fatalities),
+    (d) => d.year
+  );
+
+  const years = Array.from(
+    new Set([...totalByYear.keys(), ...civilianByYear.keys()])
+  )
+    .filter((y) => y >= 2018 && y <= 2024)
+    .sort();
+
+  const data = years.map((year) => ({
+    year: year,
+    civilian: civilianByYear.get(year) || 0,
+    total: totalByYear.get(year) || 0,
+  }));
+
+  data.forEach((d) => {
+    d.combatant = d.total - d.civilian;
+  });
+
+  const xScale = d3
+    .scaleBand()
+    .domain(data.map((d) => d.year))
+    .range([0, width])
+    .padding(0.2);
+
+  const yScale = d3
+    .scaleLinear()
+    .domain([0, d3.max(data, (d) => Math.max(d.civilian, d.combatant))])
+    .nice()
+    .range([height, 0]);
+
+  const subgroups = ["civilian", "combatant"];
+  const xSubgroup = d3
+    .scaleBand()
+    .domain(subgroups)
+    .range([0, xScale.bandwidth()])
+    .padding(0.1);
+
+  const tooltip = container.append("div").attr("class", "tooltip");
+
+  g.selectAll("g.group")
+    .data(data)
+    .enter()
+    .append("g")
+    .attr("class", "group")
+    .attr("transform", (d) => `translate(${xScale(d.year)},0)`)
+    .selectAll("rect")
+    .data((d) => subgroups.map((key) => ({ key, value: d[key], year: d.year })))
+    .enter()
+    .append("rect")
+    .attr("class", (d) => `bar-group-${d.key === "civilian" ? 2 : 1}`)
+    .attr("x", (d) => xSubgroup(d.key))
+    .attr("y", (d) => yScale(d.value))
+    .attr("width", xSubgroup.bandwidth())
+    .attr("height", (d) => height - yScale(d.value))
+    .on("mouseover", function (event, d) {
+      tooltip
+        .classed("visible", true)
+        .style("left", event.pageX + 10 + "px")
+        .style("top", event.pageY - 10 + "px")
+        .html(`Year: ${d.year}<br>${d.key}: ${d.value.toLocaleString()}`);
+    })
+    .on("mouseout", function () {
+      tooltip.classed("visible", false);
+    });
+
+  g.append("g")
+    .attr("class", "axis")
+    .attr("transform", `translate(0,${height})`)
+    .call(d3.axisBottom(xScale));
+
+  g.append("g")
+    .attr("class", "axis")
+    .call(d3.axisLeft(yScale).tickFormat(d3.format(".2s")));
+
+  g.append("text")
+    .attr("class", "axis-label")
+    .attr("transform", "rotate(-90)")
+    .attr("y", -50)
+    .attr("x", -height / 2)
+    .attr("text-anchor", "middle")
+    .text("Casualties");
+
+  g.append("text")
+    .attr("class", "axis-label")
+    .attr("x", width / 2)
+    .attr("y", height + 50)
+    .attr("text-anchor", "middle")
+    .text("Year");
+
+  const legend = g
+    .append("g")
+    .attr("class", "legend")
+    .attr("transform", `translate(${width + 20}, 20)`);
+
+  subgroups.forEach((subgroup, i) => {
+    const legendRow = legend
+      .append("g")
+      .attr("transform", `translate(0, ${i * 20})`);
+
+    legendRow
+      .append("rect")
+      .attr("class", `bar-group-${subgroup === "civilian" ? 2 : 1}`)
+      .attr("width", 15)
+      .attr("height", 15);
+
+    legendRow
+      .append("text")
+      .attr("x", 20)
+      .attr("y", 12)
+      .text(subgroup.charAt(0).toUpperCase() + subgroup.slice(1));
+  });
+}
+
+// 3. Heatmap - Events targeting civilians by year and month (aggregated)
+function createHeatmap() {
+  if (!loadedData.eventsTargetingCivilians) return;
+
+  const container = d3.select("#heatmap");
+  const margin = { top: 60, right: 30, bottom: 60, left: 100 };
+  const width = 900 - margin.left - margin.right;
+  const height = 500 - margin.top - margin.bottom;
+
+  container.html("");
+
+  const svg = container
+    .append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom);
+
+  const g = svg
+    .append("g")
+    .attr("transform", `translate(${margin.left},${margin.top})`);
+
+  const regionGroups = {
+    "Middle East & Asia": [
+      "Afghanistan",
+      "Iraq",
+      "Syria",
+      "Yemen",
+      "Pakistan",
+      "Israel",
+      "Palestine",
+    ],
+    Africa: [
+      "Nigeria",
+      "Somalia",
+      "Democratic Republic of the Congo",
+      "Ethiopia",
+      "Mali",
+      "Burkina Faso",
+    ],
+    Europe: ["Ukraine", "Russia", "Azerbaijan", "Armenia"],
+    Americas: ["Colombia", "Mexico", "Haiti", "Venezuela"],
+  };
+
+  const regionYearData = {};
+  Object.keys(regionGroups).forEach((region) => {
+    regionYearData[region] = {};
+    loadedData.eventsTargetingCivilians.forEach((d) => {
+      if (
+        regionGroups[region].some(
+          (country) =>
+            d.country.includes(country) || country.includes(d.country)
+        )
+      ) {
+        regionYearData[region][d.year] =
+          (regionYearData[region][d.year] || 0) + d.events;
+      }
+    });
+  });
+
+  const years = [2018, 2019, 2020, 2021, 2022, 2023, 2024];
+  const regions = Object.keys(regionGroups);
+
+  const maxValue = d3.max(regions, (region) =>
+    d3.max(years, (year) => regionYearData[region][year] || 0)
+  );
+  const colorScale = colors.heatmap.domain([0, maxValue]);
+
+  const xScale = d3
+    .scaleBand()
+    .domain(years.map(String))
+    .range([0, width])
+    .padding(0.05);
+
+  const yScale = d3
+    .scaleBand()
+    .domain(regions)
+    .range([0, height])
+    .padding(0.05);
+
+  const tooltip = container.append("div").attr("class", "tooltip");
+
+  regions.forEach((region) => {
+    years.forEach((year) => {
+      const value = regionYearData[region][year] || 0;
+      const cell = g
+        .append("rect")
+        .attr("class", "heatmap-cell")
+        .attr("x", xScale(String(year)))
+        .attr("y", yScale(region))
+        .attr("width", xScale.bandwidth())
+        .attr("height", yScale.bandwidth())
+        .on("mouseover", function (event) {
+          tooltip
+            .classed("visible", true)
+            .style("left", event.pageX + 10 + "px")
+            .style("top", event.pageY - 10 + "px")
+            .html(`${region}<br>${year}: ${value.toLocaleString()} events`);
+        })
+        .on("mouseout", function () {
+          tooltip.classed("visible", false);
         });
-      },{rootMargin:"-50% 0px -40% 0px",threshold:[0,1]});
 
-      targets.forEach(t=>t&&obs.observe(t));
+      cell.style("fill", colorScale(value));
 
-      document.querySelectorAll('.page-index a[href^="#"]').forEach(a=>{
-        a.addEventListener("click",()=>{
-          const id=a.getAttribute("href").slice(1);
-          const t=document.getElementById(id);
-          if(!t) return;
-          const host=t.closest("details.section");
-          if(host && !host.open) host.open=true;
-        });
-      });
-    </script>
+      if (value > 0) {
+        g.append("text")
+          .attr("class", "axis")
+          .attr("x", xScale(String(year)) + xScale.bandwidth() / 2)
+          .attr("y", yScale(region) + yScale.bandwidth() / 2)
+          .attr("text-anchor", "middle")
+          .attr("dominant-baseline", "middle")
+          .attr("fill", value > maxValue / 2 ? "white" : "black")
+          .attr("font-size", "11px")
+          .text(value > 1000 ? d3.format(".1s")(value) : value);
+      }
+    });
+  });
 
-    <script src="visualizations.js"></script>
-  </body>
-</html>
+  g.append("g")
+    .attr("class", "axis")
+    .attr("transform", `translate(0,${height})`)
+    .call(d3.axisBottom(xScale));
+
+  g.append("g").attr("class", "axis").call(d3.axisLeft(yScale));
+
+  g.append("text")
+    .attr("class", "axis-label")
+    .attr("x", width / 2)
+    .attr("y", height + 40)
+    .attr("text-anchor", "middle")
+    .text("Year");
+
+  g.append("text")
+    .attr("class", "axis-label")
+    .attr("transform", "rotate(-90)")
+    .attr("y", -70)
+    .attr("x", -height / 2)
+    .attr("text-anchor", "middle")
+    .text("Region");
+}
+
+// 4. 100% Stacked Bar Chart - Event types by region
+function createStackedBarChart() {
+  if (!loadedData.eventsTargetingCivilians || !loadedData.demonstrationEvents)
+    return;
+
+  const container = d3.select("#stacked-bar-chart");
+  const margin = { top: 40, right: 180, bottom: 60, left: 80 };
+  const width = 800 - margin.left - margin.right;
+  const height = 400 - margin.bottom - margin.top;
+
+  container.html("");
+
+  const svg = container
+    .append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom);
+
+  const g = svg
+    .append("g")
+    .attr("transform", `translate(${margin.left},${margin.top})`);
+
+  const regionGroups = {
+    "Middle East & Asia": [
+      "Afghanistan",
+      "Iraq",
+      "Syria",
+      "Yemen",
+      "Pakistan",
+      "Israel",
+      "Palestine",
+    ],
+    Africa: [
+      "Nigeria",
+      "Somalia",
+      "Democratic Republic of the Congo",
+      "Ethiopia",
+      "Mali",
+      "Burkina Faso",
+    ],
+    Europe: ["Ukraine", "Russia", "Azerbaijan", "Armenia"],
+    Americas: ["Colombia", "Mexico", "Haiti", "Venezuela"],
+  };
+
+  const regionData = [];
+  Object.keys(regionGroups).forEach((region) => {
+    const countries = regionGroups[region];
+    let targetingCivilians = 0;
+    let demonstrations = 0;
+
+    loadedData.eventsTargetingCivilians.forEach((d) => {
+      if (
+        countries.some((c) => d.country.includes(c) || c.includes(d.country))
+      ) {
+        targetingCivilians += d.events;
+      }
+    });
+
+    loadedData.demonstrationEvents.forEach((d) => {
+      if (
+        countries.some((c) => d.country.includes(c) || c.includes(d.country))
+      ) {
+        demonstrations += d.events;
+      }
+    });
+
+    let other = 0;
+    loadedData.fatalities.forEach((d) => {
+      if (
+        countries.some((c) => d.country.includes(c) || c.includes(d.country))
+      ) {
+        other += d.fatalities;
+      }
+    });
+
+    other = Math.min(other / 100, targetingCivilians + demonstrations);
+
+    regionData.push({
+      region: region,
+      targeting: targetingCivilians,
+      demonstrations: demonstrations,
+      other: other,
+    });
+  });
+
+  const keys = ["targeting", "demonstrations", "other"];
+  const keyLabels = {
+    targeting: "Targeting Civilians",
+    demonstrations: "Demonstrations",
+    other: "Other Events",
+  };
+
+  const stackedData = regionData.map((d) => {
+    const total = keys.reduce((sum, key) => sum + d[key], 0);
+    const percentages = {};
+    keys.forEach((key) => {
+      percentages[key] = total > 0 ? (d[key] / total) * 100 : 0;
+    });
+    percentages.region = d.region;
+    return percentages;
+  });
+
+  const xScale = d3
+    .scaleBand()
+    .domain(regionData.map((d) => d.region))
+    .range([0, width])
+    .padding(0.2);
+
+  const yScale = d3.scaleLinear().domain([0, 100]).range([height, 0]);
+
+  const tooltip = container.append("div").attr("class", "tooltip");
+
+  const stack = d3.stack().keys(keys);
+
+  const series = stack(stackedData);
+
+  g.selectAll("g.series")
+    .data(series)
+    .enter()
+    .append("g")
+    .attr("class", (d) => `series category-${d.key}`)
+    .selectAll("rect")
+    .data((d) => d.map((item) => ({ ...item, key: d.key })))
+    .enter()
+    .append("rect")
+    .attr("class", (d) => `stacked-bar category-${d.key}`)
+    .attr("x", (d) => xScale(d.data.region))
+    .attr("y", (d) => yScale(d[1]))
+    .attr("height", (d) => yScale(d[0]) - yScale(d[1]))
+    .attr("width", xScale.bandwidth())
+    .on("mouseover", function (event, d) {
+      const value = (d[1] - d[0]).toFixed(1);
+      tooltip
+        .classed("visible", true)
+        .style("left", event.pageX + 10 + "px")
+        .style("top", event.pageY - 10 + "px")
+        .html(`${d.data.region}<br>${keyLabels[d.key]}: ${value}%`);
+    })
+    .on("mouseout", function () {
+      tooltip.classed("visible", false);
+    });
+
+  g.append("g")
+    .attr("class", "axis")
+    .attr("transform", `translate(0,${height})`)
+    .call(d3.axisBottom(xScale))
+    .selectAll("text")
+    .attr("transform", "rotate(-15)")
+    .style("text-anchor", "end");
+
+  g.append("g")
+    .attr("class", "axis")
+    .call(d3.axisLeft(yScale).tickFormat((d) => d + "%"));
+
+  g.append("text")
+    .attr("class", "axis-label")
+    .attr("transform", "rotate(-90)")
+    .attr("y", -50)
+    .attr("x", -height / 2)
+    .attr("text-anchor", "middle")
+    .text("Percentage");
+
+  g.append("text")
+    .attr("class", "axis-label")
+    .attr("x", width / 2)
+    .attr("y", height + 50)
+    .attr("text-anchor", "middle")
+    .text("Region");
+
+  const legend = g
+    .append("g")
+    .attr("class", "legend")
+    .attr("transform", `translate(${width + 20}, 20)`);
+
+  keys.forEach((key, i) => {
+    const legendRow = legend
+      .append("g")
+      .attr("transform", `translate(0, ${i * 20})`);
+
+    legendRow
+      .append("rect")
+      .attr("class", `category-${key}`)
+      .attr("width", 15)
+      .attr("height", 15);
+
+    legendRow.append("text").attr("x", 20).attr("y", 12).text(keyLabels[key]);
+  });
+}
+
+// 5. Waffle Chart - Distribution of event types
+function createWaffleChart() {
+  if (!loadedData.eventsTargetingCivilians || !loadedData.demonstrationEvents)
+    return;
+
+  const totalEvents = [
+    {
+      type: "Events targeting civilians",
+      value: d3.sum(loadedData.eventsTargetingCivilians, (d) => d.events),
+    },
+    {
+      type: "Demonstration events",
+      value: d3.sum(loadedData.demonstrationEvents, (d) => d.events),
+    },
+  ];
+
+  const total = d3.sum(totalEvents, (d) => d.value);
+
+  const numSquares = 100;
+  const squareSize = 20;
+  const cols = 10;
+  const rows = numSquares / cols;
+
+  const waffleData = [];
+  totalEvents.forEach((d) => {
+    d.units = Math.round((d.value / total) * numSquares);
+    for (let i = 0; i < d.units; i++) {
+      waffleData.push({ type: d.type });
+    }
+  });
+
+  const width = cols * squareSize;
+  const height = rows * squareSize;
+
+  const container = d3.select("#waffle-chart");
+  container.html("");
+
+  const svg = container
+    .append("svg")
+    .attr("width", width)
+    .attr("height", height)
+    .style("font-family", "sans-serif");
+
+  const color = d3
+    .scaleOrdinal()
+    .domain(totalEvents.map((d) => d.type))
+    .range(["#d1495b", "#edae49"]);
+
+  svg
+    .selectAll("rect")
+    .data(waffleData)
+    .enter()
+    .append("rect")
+    .attr("x", (_, i) => (i % cols) * squareSize)
+    .attr("y", (_, i) => Math.floor(i / cols) * squareSize)
+    .attr("width", squareSize - 2)
+    .attr("height", squareSize - 2)
+    .attr("fill", (d) => color(d.type));
+
+  const legend = container.append("div").style("margin-top", "10px");
+
+  legend
+    .selectAll(".legend-item")
+    .data(totalEvents)
+    .enter()
+    .append("div")
+    .style("display", "flex")
+    .style("align-items", "center")
+    .style("margin-bottom", "5px")
+    .html(
+      (d) =>
+        `<div style="width:15px; height:15px; background:${color(
+          d.type
+        )}; margin-right:8px;"></div> ${d.type} (${d3.format(",")(d.value)})`
+    );
+}
+
+// 6. Choropleth Map – Geographic distribution of conflicts
+async function createChoroplethMap() {
+  if (!loadedData.eventsTargetingCivilians || !loadedData.demonstrationEvents) return;
+
+  const container = d3.select("#choropleth-map");
+  container.html("");
+
+  const margin = { top: 10, right: 10, bottom: 10, left: 10 };
+  const width = 980 - margin.left - margin.right;
+  const height = 540 - margin.top - margin.bottom;
+
+  const svg = container
+    .append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+    .append("g")
+    .attr("transform", `translate(${margin.left},${margin.top})`);
+
+  const tooltip = container.append("div").attr("class", "tooltip");
+
+  // Aggregate events by COUNTRY (sum across years)
+  const byCountryEvents = new Map();
+
+  const addEvents = (arr, key) => {
+    arr.forEach(d => {
+      const c = (d.country || "").trim();
+      const v = +d[key] || 0;
+      byCountryEvents.set(c, (byCountryEvents.get(c) || 0) + v);
+    });
+  };
+  addEvents(loadedData.eventsTargetingCivilians, "events");
+  addEvents(loadedData.demonstrationEvents, "events");
+
+  // Name reconciliation (common mismatches between GeoJSON names and dataset names)
+  const nameFix = new Map([
+    ["Congo (Brazzaville)","Republic of the Congo"],
+    ["Congo (Kinshasa)","Democratic Republic of the Congo"],
+    ["Côte d’Ivoire","Cote d'Ivoire"],
+    ["Côte d'Ivoire","Cote d'Ivoire"],
+    ["Burma","Myanmar"],
+    ["Swaziland","Eswatini"],
+    ["Palestine","Palestine"],
+    ["Palestinian Territory","Palestine"],
+    ["Syria","Syrian Arab Republic"],
+    ["Russia","Russian Federation"],
+    ["Iran","Iran, Islamic Republic of"],
+    ["Moldova","Republic of Moldova"],
+    ["Bolivia","Bolivia (Plurinational State of)"],
+    ["Tanzania","United Republic of Tanzania"],
+    ["Venezuela","Venezuela (Bolivarian Republic of)"],
+    ["Laos","Lao People's Democratic Republic"],
+    ["North Korea","Democratic People's Republic of Korea"],
+    ["South Korea","Republic of Korea"],
+    ["Cape Verde","Cabo Verde"],
+    ["Eswatini","Eswatini"],
+    ["Ivory Coast","Cote d'Ivoire"],
+    ["Sahrawi Arab Democratic Republic","Western Sahara"],
+    ["Turkey","Türkiye"]
+  ]);
+
+  // Load topojson helper if needed
+  async function ensureTopojson() {
+    if (window.topojson) return;
+    await new Promise((res, rej) => {
+      const s = document.createElement("script");
+      s.src = "https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js";
+      s.onload = res; s.onerror = rej;
+      document.head.appendChild(s);
+    });
+  }
+  await ensureTopojson();
+
+  // Load world topology
+  const world = await d3.json("https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json");
+  const countries = topojson.feature(world, world.objects.countries);
+
+  const projection = d3.geoNaturalEarth1().fitSize([width, height], countries);
+  const path = d3.geoPath(projection);
+
+  // Build value lookup keyed by GeoJSON country name
+  // We try exact match, then the reconciliation map, then a relaxed comparison.
+  const valueByName = new Map();
+  // Precompute a lowercase map of dataset names for fallback matching
+  const dsLower = new Map([...byCountryEvents.entries()].map(([k,v]) => [k.toLowerCase(), v]));
+
+  const geoNames = new Set(countries.features.map(f => f.properties.name));
+
+  geoNames.forEach(name => {
+    const fixed = nameFix.get(name) || name;
+    let v = byCountryEvents.get(fixed);
+    if (v == null) {
+      v = byCountryEvents.get(name);
+    }
+    if (v == null) {
+      const lc = fixed.toLowerCase();
+      // try contains-style loose match
+      let hit = null;
+      for (const [nLower, val] of dsLower) {
+        if (nLower === lc || nLower.includes(lc) || lc.includes(nLower)) { hit = val; break; }
+      }
+      v = hit;
+    }
+    valueByName.set(name, v || 0);
+  });
+
+  const values = Array.from(valueByName.values());
+  const maxVal = d3.max(values) || 1;
+
+  const color = d3.scaleQuantize()
+    .domain([0, maxVal])
+    .range(d3.schemeReds[7]);
+
+  svg
+    .selectAll("path.country")
+    .data(countries.features)
+    .enter()
+    .append("path")
+    .attr("class", "country")
+    .attr("d", path)
+    .attr("fill", d => color(valueByName.get(d.properties.name) || 0))
+    .attr("stroke", "#fff")
+    .attr("stroke-width", 0.6)
+    .on("mousemove", function (event, d) {
+      const name = d.properties.name;
+      const v = valueByName.get(name) || 0;
+      tooltip
+        .classed("visible", true)
+        .style("left", event.pageX + 12 + "px")
+        .style("top", event.pageY - 12 + "px")
+        .html(`${name}<br>${v.toLocaleString()} events`);
+    })
+    .on("mouseout", () => tooltip.classed("visible", false));
+
+  // Legend
+  const legendWidth = 260, legendHeight = 10;
+  const legend = svg.append("g").attr("transform", `translate(${width - legendWidth - 12}, ${height - 36})`);
+
+  const legendScale = d3.scaleLinear().domain(color.domain()).range([0, legendWidth]);
+  const legendAxis = d3.axisBottom(legendScale)
+    .tickSize(6)
+    .tickValues(color.range().map(d => color.invertExtent(d)[0]))
+    .tickFormat(d3.format(".2s"));
+
+  const gradId = "choropleth-grad";
+  const defs = svg.append("defs");
+  const linearGrad = defs.append("linearGradient").attr("id", gradId);
+
+  color.range().forEach((c, i, arr) => {
+    linearGrad.append("stop")
+      .attr("offset", `${(i / (arr.length - 1)) * 100}%`)
+      .attr("stop-color", c);
+  });
+
+  legend.append("rect")
+    .attr("width", legendWidth)
+    .attr("height", legendHeight)
+    .attr("fill", `url(#${gradId})`);
+
+  legend.append("g")
+    .attr("transform", `translate(0,${legendHeight})`)
+    .call(legendAxis)
+    .call(g => g.select(".domain").remove());
+
+  legend.append("text")
+    .attr("x", 0)
+    .attr("y", -6)
+    .attr("class", "axis-label")
+    .text("Total conflict events (civilians & demonstrations)");
+}
