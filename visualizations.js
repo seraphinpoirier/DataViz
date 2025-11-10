@@ -99,7 +99,7 @@ Promise.all([
       createHeatmap();
       createStackedBarChart();
       createWaffleChart();
-      createChoroplethMap();
+
       createHistogram();
       createViolinPlot();
       createBoxPlot();
@@ -586,157 +586,6 @@ function createWaffleChart() {
     );
 }
 
-async function createChoroplethMap() {
-  if (!loadedData.eventsTargetingCivilians || !loadedData.demonstrationEvents) return;
-
-  const container = d3.select("#choropleth-map");
-  container.html("");
-
-  const margin = { top: 10, right: 10, bottom: 10, left: 10 };
-  const width = 980 - margin.left - margin.right;
-  const height = 540 - margin.top - margin.bottom;
-
-  const svg = container
-    .append("svg")
-    .attr("width", width + margin.left + margin.right)
-    .attr("height", height + margin.top + margin.bottom)
-    .append("g")
-    .attr("transform", `translate(${margin.left},${margin.top})`);
-
-  const tooltip = container.append("div").attr("class", "tooltip");
-
-  const byCountryEvents = new Map();
-
-  const addEvents = (arr, key) => {
-    arr.forEach((d) => {
-      const c = (d.country || "").trim();
-      const v = +d[key] || 0;
-      byCountryEvents.set(c, (byCountryEvents.get(c) || 0) + v);
-    });
-  };
-
-  addEvents(loadedData.eventsTargetingCivilians, "events");
-  addEvents(loadedData.demonstrationEvents, "events");
-
-  const nameFix = new Map([
-    ["Congo (Brazzaville)", "Republic of the Congo"],
-    ["Congo (Kinshasa)", "Democratic Republic of the Congo"],
-    ["Côte d’Ivoire", "Cote d'Ivoire"],
-    ["Côte d'Ivoire", "Cote d'Ivoire"],
-    ["Burma", "Myanmar"],
-    ["Swaziland", "Eswatini"],
-    ["Palestine", "Palestine"],
-    ["Palestinian Territory", "Palestine"],
-    ["Syria", "Syrian Arab Republic"],
-    ["Russia", "Russian Federation"],
-    ["Iran", "Iran, Islamic Republic of"],
-    ["Moldova", "Republic of Moldova"],
-    ["Bolivia", "Bolivia (Plurinational State of)"],
-    ["Tanzania", "United Republic of Tanzania"],
-    ["Venezuela", "Venezuela (Bolivarian Republic of)"],
-    ["Laos", "Lao People's Democratic Republic"],
-    ["North Korea", "Democratic People's Republic of Korea"],
-    ["South Korea", "Republic of Korea"],
-    ["Cape Verde", "Cabo Verde"],
-    ["Eswatini", "Eswatini"],
-    ["Ivory Coast", "Cote d'Ivoire"],
-    ["Sahrawi Arab Democratic Republic", "Western Sahara"],
-    ["Turkey", "Türkiye"],
-  ]);
-
-  async function ensureTopojson() {
-    if (window.topojson) return;
-    await new Promise((res, rej) => {
-      const s = document.createElement("script");
-      s.src = "https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js";
-      s.onload = res;
-      s.onerror = rej;
-      document.head.appendChild(s);
-    });
-  }
-
-  await ensureTopojson();
-
-  const world = await d3.json("https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json");
-  const countries = topojson.feature(world, world.objects.countries);
-
-  const projection = d3.geoNaturalEarth1().fitSize([width, height], countries);
-  const path = d3.geoPath(projection);
-
-  const valueByName = new Map();
-  const dsLower = new Map([...byCountryEvents.entries()].map(([k, v]) => [k.toLowerCase(), v]));
-  const geoNames = new Set(countries.features.map((f) => f.properties.name));
-
-  geoNames.forEach((name) => {
-    const fixed = nameFix.get(name) || name;
-    let v = byCountryEvents.get(fixed);
-    if (v == null) v = byCountryEvents.get(name);
-    if (v == null) {
-      const lc = fixed.toLowerCase();
-      let hit = null;
-      for (const [nLower, val] of dsLower) {
-        if (nLower === lc || nLower.includes(lc) || lc.includes(nLower)) {
-          hit = val;
-          break;
-        }
-      }
-      v = hit;
-    }
-    valueByName.set(name, v || 0);
-  });
-
-  const values = Array.from(valueByName.values());
-  const maxVal = d3.max(values) || 1;
-
-  const color = d3.scaleQuantize().domain([0, maxVal]).range(d3.schemeReds[7]);
-
-  svg
-    .selectAll("path.country")
-    .data(countries.features)
-    .enter()
-    .append("path")
-    .attr("class", "country")
-    .attr("d", path)
-    .attr("fill", (d) => color(valueByName.get(d.properties.name) || 0))
-    .attr("stroke", "#fff")
-    .attr("stroke-width", 0.6)
-    .on("mousemove", function (event, d) {
-      const name = d.properties.name;
-      const v = valueByName.get(name) || 0;
-      tooltip
-        .classed("visible", true)
-        .style("left", event.pageX + 12 + "px")
-        .style("top", event.pageY - 12 + "px")
-        .html(`${name}<br>${v.toLocaleString()} events`);
-    })
-    .on("mouseout", () => tooltip.classed("visible", false));
-
-  const legendWidth = 260;
-  const legendHeight = 10;
-  const legend = svg.append("g").attr("transform", `translate(${width - legendWidth - 12}, ${height - 36})`);
-
-  const legendScale = d3.scaleLinear().domain(color.domain()).range([0, legendWidth]);
-  const legendAxis = d3
-    .axisBottom(legendScale)
-    .tickSize(6)
-    .tickValues(color.range().map((d) => color.invertExtent(d)[0]))
-    .tickFormat(d3.format(".2s"));
-
-  const gradId = "choropleth-grad";
-  const defs = svg.append("defs");
-  const linearGrad = defs.append("linearGradient").attr("id", gradId);
-
-  color.range().forEach((c, i, arr) => {
-    linearGrad.append("stop").attr("offset", `${(i / (arr.length - 1)) * 100}%`).attr("stop-color", c);
-  });
-
-  legend.append("rect").attr("width", legendWidth).attr("height", legendHeight).attr("fill", `url(#${gradId})`);
-
-  legend.append("g").attr("transform", `translate(0,${legendHeight})`).call(legendAxis).call((g) => g.select(".domain").remove());
-
-  legend.append("text").attr("x", 0).attr("y", -6).attr("class", "axis-label").text("Total conflict events (civilians & demonstrations)");
-}
-
 function createHistogram() {
   if (!loadedData.fatalities) return;
 
@@ -754,11 +603,19 @@ function createHistogram() {
 
   const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
 
-  const values = loadedData.fatalities.map((d) => d.fatalities).filter((v) => v >= 0);
+  const raw = loadedData.fatalities.map((d) => d.fatalities).filter((v) => v > 0);
+  if (!raw.length) return;
 
-  const x = d3.scaleLinear().domain([0, d3.max(values) || 1]).nice().range([0, width]);
+  const max = d3.max(raw);
 
-  const bins = d3.bin().domain(x.domain()).thresholds(30)(values);
+  const x = d3.scaleLog().domain([1, max]).range([0, width]).nice();
+  const tickFormat = d3.format(".2s");
+
+  const logVals = raw.map((v) => Math.log10(v));
+  const logMin = 0;
+  const logMax = Math.log10(max);
+  const thresholds = d3.range(logMin, logMax, (logMax - logMin) / 30);
+  const bins = d3.bin().domain([logMin, logMax]).thresholds(thresholds).value((v) => Math.log10(v))(raw);
 
   const y = d3.scaleLinear().domain([0, d3.max(bins, (d) => d.length) || 1]).nice().range([height, 0]);
 
@@ -768,21 +625,23 @@ function createHistogram() {
     .data(bins)
     .enter()
     .append("rect")
-    .attr("x", (d) => x(d.x0) + 1)
+    .attr("x", (d) => x(Math.pow(10, d.x0)) + 1)
     .attr("y", (d) => y(d.length))
-    .attr("width", (d) => Math.max(0, x(d.x1) - x(d.x0) - 1))
+    .attr("width", (d) => Math.max(0, x(Math.pow(10, d.x1)) - x(Math.pow(10, d.x0)) - 1))
     .attr("height", (d) => height - y(d.length))
     .attr("fill", colors.primary)
     .on("mousemove", (event, d) => {
+      const lo = Math.round(Math.pow(10, d.x0));
+      const hi = Math.round(Math.pow(10, d.x1));
       tooltip
         .classed("visible", true)
         .style("left", event.pageX + 10 + "px")
         .style("top", event.pageY - 10 + "px")
-        .html(`${d.x0}–${d.x1}<br>${d.length} records`);
+        .html(`${tickFormat(lo)}–${tickFormat(hi)}<br>${d.length} records`);
     })
     .on("mouseout", () => tooltip.classed("visible", false));
 
-  g.append("g").attr("transform", `translate(0,${height})`).call(d3.axisBottom(x).ticks(6).tickFormat(d3.format(".2s")));
+  g.append("g").attr("transform", `translate(0,${height})`).call(d3.axisBottom(x).ticks(6, "~s"));
   g.append("g").call(d3.axisLeft(y));
 
   g.append("text").attr("transform", "rotate(-90)").attr("x", -height / 2).attr("y", -50).attr("text-anchor", "middle").text("Count");
@@ -809,36 +668,43 @@ function createViolinPlot() {
   const byRegion = d3.group(loadedData.fatalities, (d) => getRegion(d.country));
   const regions = [...byRegion.keys()].filter((r) => r !== "Other");
 
-  const y = d3.scaleLinear().domain([0, d3.max(loadedData.fatalities, (d) => d.fatalities) || 1]).nice().range([height, 0]);
+  const max = d3.max(loadedData.fatalities, (d) => d.fatalities) || 1;
+  const y = d3.scaleLog().domain([1, max]).range([height, 0]).nice();
   const x = d3.scaleBand().domain(regions).range([0, width]).padding(0.2);
 
-  const maxCount = (() => {
-    let m = 0;
-    regions.forEach((r) => {
-      const arr = byRegion.get(r).map((d) => d.fatalities);
-      const bins = d3.bin().domain(y.domain()).thresholds(25)(arr);
-      m = Math.max(m, d3.max(bins, (b) => b.length) || 0);
-    });
-    return m;
-  })();
+  function epanechnikov(bw) {
+    return (u) => {
+      u = u / bw;
+      return Math.abs(u) <= 1 ? 0.75 * (1 - u * u) / bw : 0;
+    };
+  }
 
-  const xNum = d3.scaleLinear().range([0, x.bandwidth() / 2]).domain([0, maxCount]);
+  function kernelDensityEstimator(kernel, X) {
+    return (V) => X.map((x) => [x, d3.mean(V, (v) => kernel(x - v))]);
+  }
+
+  const logMax = Math.log10(max + 1);
+  const yGrid = d3.range(0, logMax, logMax / 40);
+  const kde = kernelDensityEstimator(epanechnikov(0.3), yGrid);
 
   regions.forEach((region) => {
-    const arr = byRegion.get(region).map((d) => d.fatalities);
-    const bins = d3.bin().domain(y.domain()).thresholds(25)(arr);
+    const valsLog = byRegion.get(region).map((d) => Math.log10(d.fatalities + 1));
+    if (!valsLog.length) return;
+
+    const density = kde(valsLog);
+    const w = d3.scaleLinear().domain([0, d3.max(density, (d) => d[1])]).range([0, x.bandwidth() / 2]);
 
     const area = d3
       .area()
-      .x0((d) => -xNum(d.length))
-      .x1((d) => xNum(d.length))
-      .y((d) => y((d.x0 + d.x1) / 2))
+      .x0((d) => -w(d[1]))
+      .x1((d) => w(d[1]))
+      .y((d) => y(Math.pow(10, d[0]) - 1))
       .curve(d3.curveCatmullRom);
 
     g.append("g")
       .attr("transform", `translate(${x(region) + x.bandwidth() / 2},0)`)
       .append("path")
-      .datum(bins)
+      .datum(density)
       .attr("d", area)
       .attr("fill", colors.quinary)
       .attr("opacity", 0.8)
@@ -850,7 +716,7 @@ function createViolinPlot() {
     .attr("transform", "rotate(-15)")
     .style("text-anchor", "end");
 
-  g.append("g").call(d3.axisLeft(y).tickFormat(d3.format(".2s")));
+  g.append("g").call(d3.axisLeft(y).ticks(6, "~s"));
 
   g.append("text").attr("transform", "rotate(-90)").attr("x", -height / 2).attr("y", -60).attr("text-anchor", "middle").text("Fatalities per country-year");
   g.append("text").attr("x", width / 2).attr("y", height + 50).attr("text-anchor", "middle").text("Region");
@@ -876,19 +742,20 @@ function createBoxPlot() {
   const dataByYear = d3.group(loadedData.fatalities, (d) => d.year);
   const years = [...dataByYear.keys()].filter((y) => y >= 2018 && y <= 2024).sort((a, b) => a - b);
 
-  const x = d3.scaleBand().domain(years).range([0, width]).padding(0.4);
-  const allVals = [...loadedData.fatalities.map((d) => d.fatalities)];
-  const y = d3.scaleLinear().domain([0, d3.max(allVals) || 1]).nice().range([height, 0]);
+  const allVals = [...loadedData.fatalities.map((d) => d.fatalities)].filter((v) => v > 0);
+  if (!allVals.length) return;
 
+  const y = d3.scaleLog().domain([1, d3.max(allVals)]).range([height, 0]).nice();
+  const x = d3.scaleBand().domain(years).range([0, width]).padding(0.4);
   const boxWidth = Math.min(40, x.bandwidth());
 
   years.forEach((year) => {
-    const vals = dataByYear.get(year).map((d) => d.fatalities).sort(d3.ascending);
+    const vals = dataByYear.get(year).map((d) => d.fatalities).filter((v) => v > 0).sort(d3.ascending);
     if (!vals.length) return;
 
-    const q1 = d3.quantile(vals, 0.25) || 0;
-    const med = d3.quantile(vals, 0.5) || 0;
-    const q3 = d3.quantile(vals, 0.75) || 0;
+    const q1 = d3.quantile(vals, 0.25) || 1;
+    const med = d3.quantile(vals, 0.5) || 1;
+    const q3 = d3.quantile(vals, 0.75) || 1;
     const iqr = q3 - q1;
 
     const min = vals.find((v) => v >= q1 - 1.5 * iqr) ?? vals[0];
@@ -913,7 +780,7 @@ function createBoxPlot() {
   });
 
   g.append("g").attr("transform", `translate(0,${height})`).call(d3.axisBottom(x).tickFormat(d3.format("d")));
-  g.append("g").call(d3.axisLeft(y).tickFormat(d3.format(".2s")));
+  g.append("g").call(d3.axisLeft(y).ticks(6, "~s"));
 
   g.append("text").attr("transform", "rotate(-90)").attr("x", -height / 2).attr("y", -60).attr("text-anchor", "middle").text("Fatalities per country-year");
   g.append("text").attr("x", width / 2).attr("y", height + 40).attr("text-anchor", "middle").text("Year");
