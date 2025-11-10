@@ -101,7 +101,7 @@ Promise.all([
       createWaffleChart();
 
       createHistogram();
-      createViolinPlot();
+      createRidgelinePlot();
       createBoxPlot();
     }
   )
@@ -648,79 +648,182 @@ function createHistogram() {
   g.append("text").attr("x", width / 2).attr("y", height + 40).attr("text-anchor", "middle").text("Fatalities per country-year");
 }
 
-function createViolinPlot() {
-  if (!loadedData.fatalities) return;
-
+function createRidgelinePlot() {
   const container = d3.select("#violin-plot");
-  container.html("");
+  container.html(""); // clear any previous content
 
-  const margin = { top: 30, right: 20, bottom: 60, left: 80 };
-  const width = 960 - margin.left - margin.right;
-  const height = 360 - margin.top - margin.bottom;
+  const controlBar = container
+    .append("div")
+    .style("display", "flex")
+    .style("gap", "10px")
+    .style("align-items", "center")
+    .style("margin-bottom", "10px");
 
-  const svg = container
-    .append("svg")
+  controlBar.append("label")
+    .attr("for", "ridge-region")
+    .style("font-weight", "600")
+    .text("Region:");
+
+  const regionSelect = controlBar.append("select").attr("id", "ridge-region");
+  ["Africa", "Middle East & Asia"].forEach(r =>
+    regionSelect.append("option").attr("value", r).text(r)
+  );
+
+  const margin = { top: 10, right: 24, bottom: 44, left: 110 };
+  // responsive width
+  const outerW = Math.min(960, Math.max(640, container.node().clientWidth || 960));
+  const width  = outerW - margin.left - margin.right;
+  const ridgeHeight = 38;
+  const months = [
+    "January","February","March","April","May","June",
+    "July","August","September","October","November","December"
+  ];
+  const height = ridgeHeight * months.length + 14;
+
+  const svg = container.append("svg")
     .attr("width", width + margin.left + margin.right)
     .attr("height", height + margin.top + margin.bottom);
 
-  const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+  const g = svg.append("g")
+    .attr("transform", `translate(${margin.left},${margin.top})`);
 
-  const byRegion = d3.group(loadedData.fatalities, (d) => getRegion(d.country));
-  const regions = [...byRegion.keys()].filter((r) => r !== "Other");
+  function prepareMonthly(dataYearly) {
+    const monthlyPath = "data/number_of_reported_fatalities_by_country-month_as-of-24Oct2025_0.csv";
 
-  const max = d3.max(loadedData.fatalities, (d) => d.fatalities) || 1;
-  const y = d3.scaleLog().domain([1, max]).range([height, 0]).nice();
-  const x = d3.scaleBand().domain(regions).range([0, width]).padding(0.2);
-
-  function epanechnikov(bw) {
-    return (u) => {
-      u = u / bw;
-      return Math.abs(u) <= 1 ? 0.75 * (1 - u * u) / bw : 0;
-    };
+    return d3.csv(monthlyPath, d => ({
+      country: d.COUNTRY || d.country,
+      year: +d.YEAR || +d.year,
+      month: +d.MONTH || +d.month || (d.DATE ? new Date(d.DATE).getMonth() + 1 : null),
+      fatalities: +d.FATALITIES || +d.fatalities || 0
+    })).then(rows => {
+      return rows.filter(r => r.country && r.month >= 1 && r.month <= 12 && r.fatalities >= 0);
+    }).catch(() => {
+      const spread = [];
+      dataYearly.forEach(d => {
+        const perMonth = (d.fatalities || 0) / 12;
+        for (let m = 1; m <= 12; m++) {
+          spread.push({ country: d.country, year: d.year, month: m, fatalities: perMonth });
+        }
+      });
+      return spread;
+    });
   }
 
-  function kernelDensityEstimator(kernel, X) {
-    return (V) => X.map((x) => [x, d3.mean(V, (v) => kernel(x - v))]);
-  }
+  prepareMonthly(loadedData.fatalities).then(monthlyRows => {
+    monthlyRows.forEach(r => r.region = getRegion(r.country));
 
-  const logMax = Math.log10(max + 1);
-  const yGrid = d3.range(0, logMax, logMax / 40);
-  const kde = kernelDensityEstimator(epanechnikov(0.3), yGrid);
+    const xLogMin = 1;
+    const xLogMax = d3.max(monthlyRows, d => d.fatalities) || 100000;
 
-  regions.forEach((region) => {
-    const valsLog = byRegion.get(region).map((d) => Math.log10(d.fatalities + 1));
-    if (!valsLog.length) return;
+    const x = d3.scaleLog()
+      .domain([xLogMin, xLogMax])
+      .range([0, width]).nice();
 
-    const density = kde(valsLog);
-    const w = d3.scaleLinear().domain([0, d3.max(density, (d) => d[1])]).range([0, x.bandwidth() / 2]);
+    const y = d3.scaleBand()
+      .domain(months)
+      .range([0, height])
+      .paddingInner(0.55);
 
-    const area = d3
-      .area()
-      .x0((d) => -w(d[1]))
-      .x1((d) => w(d[1]))
-      .y((d) => y(Math.pow(10, d[0]) - 1))
-      .curve(d3.curveCatmullRom);
+    const xAxis = d3.axisBottom(x)
+      .tickValues([1,10,100,1000,10000,100000].filter(v => v <= xLogMax))
+      .tickFormat(d3.format(".0s"));
 
     g.append("g")
-      .attr("transform", `translate(${x(region) + x.bandwidth() / 2},0)`)
-      .append("path")
-      .datum(density)
-      .attr("d", area)
-      .attr("fill", colors.quinary)
-      .attr("opacity", 0.8)
-      .attr("stroke", "#fff");
+      .attr("class", "axis")
+      .attr("transform", `translate(0,${height})`)
+      .call(xAxis);
+
+    g.append("text")
+      .attr("class", "axis-label")
+      .attr("x", width / 2)
+      .attr("y", height + 36)
+      .attr("text-anchor", "middle")
+      .text("Fatalities per country–month");
+
+    g.append("g")
+      .attr("class", "axis")
+      .call(d3.axisLeft(y).tickSizeOuter(0));
+
+    const kernelEpanechnikov = k => v => Math.abs(v) <= 1 ? 0.75 * (1 - v*v) / k : 0;
+    const kde = (valuesLog10, gridLog10, bw=0.25) => {
+      const K = kernelEpanechnikov(bw);
+      return gridLog10.map(t => {
+        const dens = d3.mean(valuesLog10, v => K((v - t) / bw)) || 0;
+        return [Math.pow(10, t), dens]; // back to linear x
+      });
+    };
+
+    const logMin = Math.log10(x.domain()[0]);
+    const logMax = Math.log10(x.domain()[1]);
+    const gridLog10 = d3.ticks(logMin, logMax, 200);
+
+    const area = d3.area()
+      .curve(d3.curveCatmullRom.alpha(0.6))
+      .x(d => x(d[0]))
+      .y0(function() {
+        const m = d3.select(this.parentNode).datum().month;
+        return y(m) + y.bandwidth()/2;
+      })
+      .y1(function(d) {
+        const m = d3.select(this.parentNode).datum().month;
+        const cy = y(m) + y.bandwidth()/2;
+        const s = ridgeHeight;           
+        return cy - d[1] * s;            
+      });
+
+    const rowsG = g.append("g"); // holds all ridges
+
+    function draw(region) {
+      const rows = months.map((mName, i) => {
+        const vals = monthlyRows
+          .filter(r => r.region === region && r.month === (i+1))
+          .map(r => Math.max(1, +r.fatalities));
+
+        const logs = vals.map(v => Math.log10(v));
+        const dens = logs.length ? kde(logs, gridLog10) : gridLog10.map(t => [Math.pow(10,t), 0]);
+
+        const peak = d3.max(dens, d => d[1]) || 1e-6;
+        const norm = dens.map(([xv, dv]) => [xv, dv/peak]);
+
+        return { month: mName, density: norm, count: vals.length };
+      });
+
+      const sel = rowsG.selectAll(".ridge-row").data(rows, d => d.month);
+      sel.exit().remove();
+
+      const enter = sel.enter().append("g").attr("class", "ridge-row");
+      enter.append("rect")
+        .attr("x", 0)
+        .attr("height", y.bandwidth())
+        .attr("rx", 6).attr("ry", 6)
+        .attr("fill", "rgba(0,0,0,0.02)")
+        .attr("stroke", "none");
+      enter.append("path")
+        .attr("class", "ridgeline")
+        .attr("fill", colors.quinary)
+        .attr("opacity", .9)
+        .attr("stroke", "#222")
+        .attr("stroke-width", 0.6);
+
+      const merged = enter.merge(sel)
+        .attr("transform", d => `translate(0, ${y(d.month)})`);
+
+      merged.select("rect").attr("width", width);
+
+      merged.select("path.ridgeline")
+        .datum(d => d.density)
+        .attr("fill", (d,i,nodes) => {
+          const idx = months.indexOf(d3.select(nodes[i].parentNode).datum().month);
+          return d3.interpolateWarm(idx / (months.length-1));
+        })
+        .attr("d", function(d){ return area.call(this, d); });
+    }
+
+    draw(regionSelect.node().value);
+    regionSelect.on("change", () => draw(regionSelect.node().value));
   });
-
-  g.append("g").attr("transform", `translate(0,${height})`).call(d3.axisBottom(x))
-    .selectAll("text")
-    .attr("transform", "rotate(-15)")
-    .style("text-anchor", "end");
-
-  g.append("g").call(d3.axisLeft(y).ticks(6, "~s"));
-
-  g.append("text").attr("transform", "rotate(-90)").attr("x", -height / 2).attr("y", -60).attr("text-anchor", "middle").text("Fatalities per country-year");
-  g.append("text").attr("x", width / 2).attr("y", height + 50).attr("text-anchor", "middle").text("Region");
 }
+
 
 function createBoxPlot() {
   if (!loadedData.fatalities) return;
