@@ -652,39 +652,57 @@ function createRidgelinePlot() {
   const container = d3.select("#violin-plot");
   container.html("");
 
-  // ----- UI: region selector -----
-  const ui = container.append("div")
-    .style("display","flex").style("gap","10px")
-    .style("align-items","center").style("margin","10px");
-  ui.append("label").attr("for","ridge-region").style("font-weight","600").text("Region:");
-  const select = ui.append("select").attr("id","ridge-region");
-  ["Africa","Middle East & Asia"].forEach(r => select.append("option").attr("value", r).text(r));
+  const toolbar = container.append("div").attr("class", "ridge-toolbar");
+  toolbar.append("label")
+    .style("font-weight", "700")
+    .style("margin-right", "2px")
+    .text("Region:");
 
-  // ----- sizes -----
+  const toggle = toolbar.append("div").attr("class", "toggle");
+  const regionsAvail = ["Africa", "Middle East & Asia"];
+  const btns = toggle.selectAll("button")
+    .data(regionsAvail)
+    .enter()
+    .append("button")
+    .attr("type", "button")
+    .attr("class", (d, i) => i === 0 ? "active" : null)
+    .text(d => d);
+
   const margin = { top: 10, right: 24, bottom: 44, left: 110 };
-  const outerW = Math.min(960, Math.max(640, container.node().clientWidth || 960));
-  const width  = outerW - margin.left - margin.right;
+  const months = [
+    "January","February","March","April","May","June",
+    "July","August","September","October","November","December"
+  ];
+  const bandHeight = 38;                     // visual height per ridge
+  const innerH = bandHeight * months.length + 14;
 
-  const months = ["January","February","March","April","May","June","July","August","September","October","November","December"];
-  const bandHeight = 38;                         // visual height per ridge
-  const height = bandHeight * months.length + 14;
+  const outerW = container.node().clientWidth || 960;
+  const width  = Math.max(640, Math.min(960, outerW)) - margin.left - margin.right;
+  const height = innerH;
 
   const svg = container.append("svg")
-    .attr("width", width + margin.left + margin.right)
-    .attr("height", height + margin.top + margin.bottom);
-  const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+    .attr("viewBox", `0 0 ${width + margin.left + margin.right} ${height + margin.top + margin.bottom}`)
+    .attr("preserveAspectRatio", "xMidYMid meet");
 
-  // ----- try monthly file, otherwise fallback to spreading year totals -----
+  const g = svg.append("g")
+    .attr("transform", `translate(${margin.left},${margin.top})`);
+
   const tryMonthly = () =>
     d3.csv("data/number_of_reported_fatalities_by_country-month_as-of-24Oct2025_0.csv",
-      d => ({ country: d.COUNTRY || d.country, month: +d.MONTH || +d.month, fatalities: +d.FATALITIES || +d.fatalities || 0 })
-    ).then(rows => rows.filter(r => r.country && r.month>=1 && r.month<=12));
+      d => ({
+        country: d.COUNTRY || d.country,
+        month: +d.MONTH || +d.month,
+        fatalities: +d.FATALITIES || +d.fatalities || 0
+      })
+    ).then(rows => rows.filter(r => r.country && r.month >= 1 && r.month <= 12));
 
   const fallbackMonthly = () => {
     const out = [];
     loadedData.fatalities.forEach(d => {
-      const perMonth = (d.fatalities || 0) / 12;
-      for (let m=1; m<=12; m++) out.push({ country: d.country, month: m, fatalities: perMonth });
+      const per = (d.fatalities || 0) / 12;
+      for (let m = 1; m <= 12; m++) {
+        out.push({ country: d.country, month: m, fatalities: per });
+      }
     });
     return out;
   };
@@ -696,23 +714,25 @@ function createRidgelinePlot() {
 
     rows.forEach(r => r.region = getRegion(r.country));
 
-    // scales
     const xMin = 1;
     const xMax = d3.max(rows, d => d.fatalities) || 100000;
+
     const x = d3.scaleLog().domain([xMin, xMax]).range([0, width]).nice();
     const yBand = d3.scaleBand().domain(months).range([0, height]).paddingInner(0.55);
 
-    g.append("g").attr("class","axis").attr("transform",`translate(0,${height})`)
-      .call(d3.axisBottom(x).tickValues([1,10,100,1000,10000,100000].filter(v=>v<=xMax)).tickFormat(d3.format(".0s")));
-    g.append("text").attr("class","axis-label").attr("x", width/2).attr("y", height+36).attr("text-anchor","middle")
-      .text("Fatalities per country–month");
-    g.append("g").attr("class","axis").call(d3.axisLeft(yBand).tickSizeOuter(0));
+    const axisX = d3.axisBottom(x)
+      .tickValues([1,10,100,1000,10000,100000].filter(v => v <= xMax))
+      .tickFormat(d3.format(".0s"));
+    g.append("g").attr("class","axis").attr("transform", `translate(0,${height})`).call(axisX);
+    g.append("text").attr("class", "axis-label")
+      .attr("x", width / 2).attr("y", height + 36)
+      .attr("text-anchor", "middle").text("Fatalities per country–month");
+    g.append("g").attr("class", "axis").call(d3.axisLeft(yBand).tickSizeOuter(0));
 
-    // KDE in log10 space
-    const kernelEpanechnikov = k => v => Math.abs(v) <= 1 ? 0.75*(1-v*v)/k : 0;
-    const kde = (valuesLog, gridLog, bw=0.25) => {
+    const kernelEpanechnikov = k => v => Math.abs(v) <= 1 ? 0.75*(1 - v*v)/k : 0;
+    const kde = (valuesLog, gridLog, bw = 0.25) => {
       const K = kernelEpanechnikov(bw);
-      return gridLog.map(t => [Math.pow(10,t), d3.mean(valuesLog, v => K((v - t)/bw)) || 0]);
+      return gridLog.map(t => [Math.pow(10, t), d3.mean(valuesLog, v => K((v - t)/bw)) || 0]);
     };
     const lgMin = Math.log10(x.domain()[0]), lgMax = Math.log10(x.domain()[1]);
     const gridLog = d3.ticks(lgMin, lgMax, 200);
@@ -720,47 +740,57 @@ function createRidgelinePlot() {
     const rowsG = g.append("g");
 
     function draw(region) {
-      const perMonth = months.map((label, idx) => {
-        const vals = rows.filter(r => r.region === region && r.month === (idx+1)).map(r => Math.max(1, +r.fatalities));
+      const monthly = months.map((label, idx) => {
+        const vals = rows.filter(r => r.region === region && r.month === (idx + 1))
+                         .map(r => Math.max(1, +r.fatalities));
         const logs = vals.map(v => Math.log10(v));
         const dens = logs.length ? kde(logs, gridLog) : gridLog.map(t => [Math.pow(10,t), 0]);
-        const peak = d3.max(dens, d => d[1]) || 1e-6;
-        return { month: label, density: dens.map(([xv, dv]) => [xv, dv/peak]), count: vals.length };
+        return { month: label, density: dens, n: vals.length };
       });
 
-      const sel = rowsG.selectAll(".ridge-row").data(perMonth, d => d.month);
+      const globalPeak = d3.max(monthly, m => d3.max(m.density, d => d[1])) || 1e-6;
+
+      const sel = rowsG.selectAll(".ridge-row").data(monthly, d => d.month);
       sel.exit().remove();
 
-      const enter = sel.enter().append("g").attr("class","ridge-row");
+      const enter = sel.enter().append("g").attr("class", "ridge-row");
       enter.append("rect")
-        .attr("x",0).attr("height", yBand.bandwidth()).attr("rx",6).attr("ry",6)
-        .attr("fill","rgba(0,0,0,0.03)").attr("stroke","none");
-      enter.append("path").attr("class","ridgeline")
-        .attr("stroke","#222").attr("stroke-width",0.6).attr("opacity",0.9);
+        .attr("x", 0).attr("height", yBand.bandwidth())
+        .attr("rx", 6).attr("ry", 6)
+        .attr("fill", "rgba(0,0,0,0.03)").attr("stroke", "none");
+      enter.append("path")
+        .attr("class", "ridgeline")
+        .attr("stroke", "#222").attr("stroke-width", 0.6).attr("opacity", 0.95);
 
-      const merged = enter.merge(sel)
-        .attr("transform", d => `translate(0, ${yBand(d.month)})`);
-
+      const merged = enter.merge(sel).attr("transform", d => `translate(0, ${yBand(d.month)})`);
       merged.select("rect").attr("width", width);
 
       merged.select("path.ridgeline")
         .each(function(d) {
-          const half = Math.max(14, Math.min(24, yBand.bandwidth()/2)); // local half-height
+          const half = Math.min( yBand.bandwidth() * 0.42, 26 );  // not too “tall”
+          const scaleY = half / globalPeak;
+
           const area = d3.area()
             .curve(d3.curveCatmullRom.alpha(0.6))
             .x(p => x(p[0]))
             .y0(half)
-            .y1(p => half - p[1]*half);
+            .y1(p => half - p[1] * scaleY);
+
           d3.select(this)
-            .attr("fill", d3.interpolateWarm(months.indexOf(d.month)/(months.length-1)))
+            .attr("fill", d3.interpolateWarm(months.indexOf(d.month) / (months.length - 1)))
             .attr("d", area(d.density));
         });
     }
 
-    draw(select.node().value);
-    select.on("change", () => draw(select.node().value));
+    // initial and toggle interactions
+    draw(regionsAvail[0]);
+    btns.on("click", function(_, region) {
+      btns.classed("active", d => d === region);
+      draw(region);
+    });
   })();
 }
+
 
 function createBoxPlot() {
   if (!loadedData.fatalities) return;
