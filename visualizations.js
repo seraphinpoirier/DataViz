@@ -654,7 +654,6 @@ function createRidgelinePlot() {
   const container = d3.select("#violin-plot");
   container.html("");
 
-  // --- Toolbar (pill buttons) ---
   const toolbar = container.append("div").attr("class", "ridge-toolbar");
   toolbar.append("label").style("font-weight","700").text("Region:");
   const toggle = toolbar.append("div").attr("class", "toggle");
@@ -667,12 +666,10 @@ function createRidgelinePlot() {
     .attr("class",(d,i)=> i===0 ? "active" : null)
     .text(d=>d);
 
-  // --- Years present in the data (limit to a sensible range) ---
   const allYears = Array.from(new Set(loadedData.fatalities.map(d=>+d.year)))
     .filter(y => y >= 2018 && y <= 2025)
     .sort((a,b)=>a-b);
 
-  // --- Sizing ---
   const margin = { top: 10, right: 24, bottom: 44, left: 100 };
   const bandH  = 36;
   const innerH = bandH * allYears.length + 10;
@@ -686,21 +683,17 @@ function createRidgelinePlot() {
     .attr("preserveAspectRatio","xMidYMid meet");
   const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
 
-  // Layers: rows under, axes above (so ticks are visible)
   const rowsLayer = g.append("g").attr("class","rows-layer");
   const xAxisG = g.append("g").attr("class","axis axis-x").attr("transform", `translate(0,${height})`);
   const yAxisG = g.append("g").attr("class","axis axis-y");
   g.append("text").attr("class","axis-label")
     .attr("x", width/2).attr("y", height+36).attr("text-anchor","middle")
-    .text("Fatalities per country–year");
+    .text("Number of Fatalities");
 
-  // ---- Scales (x based on selected region later; y is the years) ----
   const yBand = d3.scaleBand().domain(allYears.map(String)).range([0, height]).paddingInner(0.55);
 
-  // Render static y-axis once
   yAxisG.call(d3.axisLeft(yBand).tickSizeOuter(0));
 
-  // --- KDE helpers (in log domain) ---
   const kernelEpanechnikov = k => v => Math.abs(v) <= 1 ? 0.75*(1 - v*v)/k : 0;
   const kde = (valuesLog, gridLog, bw=0.22) => {
     const K = kernelEpanechnikov(bw);
@@ -708,16 +701,13 @@ function createRidgelinePlot() {
   };
 
   function draw(region) {
-    // Filter to selected region
     const inRegion = loadedData.fatalities.filter(d =>
       regionGroups[region].some(c => d.country.includes(c) || c.includes(d.country))
     );
 
-    // X scale domain from region data
     const maxX = d3.max(inRegion, d => d.fatalities) || 1;
     const x = d3.scaleLog().domain([1, Math.max(10, maxX)]).range([0, width]).nice();
 
-    // Axes
     xAxisG.call(
       d3.axisBottom(x)
         .tickValues([1,10,100,1000,10000,100000,1000000].filter(v => v <= x.domain()[1]))
@@ -725,11 +715,9 @@ function createRidgelinePlot() {
     );
     xAxisG.raise(); yAxisG.raise();
 
-    // KDE grid
     const lgMin = Math.log10(x.domain()[0]), lgMax = Math.log10(x.domain()[1]);
     const gridLog = d3.ticks(lgMin, lgMax, 180);
 
-    // Build one ridge per YEAR for the selected region
     const perYear = allYears.map(yr => {
       const vals = inRegion.filter(d => d.year === yr)
         .map(d => Math.max(1, +d.fatalities));
@@ -738,10 +726,8 @@ function createRidgelinePlot() {
       return { year: String(yr), density: dens, n: vals.length };
     });
 
-    // global peak across all years so amplitudes are comparable
     const peak = d3.max(perYear, y => d3.max(y.density, d => d[1])) || 1e-6;
 
-    // Join
     const rows = rowsLayer.selectAll(".ridge-row").data(perYear, d => d.year);
     rows.exit().remove();
 
@@ -759,7 +745,7 @@ function createRidgelinePlot() {
 
     merged.select("path.ridgeline")
       .each(function(d){
-        const half = Math.min(yBand.bandwidth() * 0.42, 24);   // keep shape inside band
+        const half = Math.min(yBand.bandwidth() * 0.42, 24);   
         const scaleY = half / peak;
         const area = d3.area()
           .curve(d3.curveCatmullRom.alpha(0.6))
@@ -771,10 +757,9 @@ function createRidgelinePlot() {
           .attr("d", area(d.density));
       });
 
-    xAxisG.raise(); yAxisG.raise();  // make sure ticks are on top
+    xAxisG.raise(); yAxisG.raise();  
   }
 
-  // Initial & interactions
   draw(REGIONS[0]);
   btns.on("click", function(_, region){
     btns.classed("active", d => d === region);
