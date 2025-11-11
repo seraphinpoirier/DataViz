@@ -645,7 +645,7 @@ function createHistogram() {
   g.append("g").call(d3.axisLeft(y));
 
   g.append("text").attr("transform", "rotate(-90)").attr("x", -height / 2).attr("y", -50).attr("text-anchor", "middle").text("Count");
-  g.append("text").attr("x", width / 2).attr("y", height + 40).attr("text-anchor", "middle").text("Fatalities per country-year");
+  g.append("text").attr("x", width / 2).attr("y", height + 40).attr("text-anchor", "middle").text("Yearly Fatalities");
 }
 
 function createRidgelinePlot() {
@@ -843,6 +843,6 @@ function createBoxPlot() {
   g.append("g").attr("transform", `translate(0,${height})`).call(d3.axisBottom(x).tickFormat(d3.format("d")));
   g.append("g").call(d3.axisLeft(y).ticks(6, "~s"));
 
-  g.append("text").attr("transform", "rotate(-90)").attr("x", -height / 2).attr("y", -60).attr("text-anchor", "middle").text("Fatalities per country-year");
+  g.append("text").attr("transform", "rotate(-90)").attr("x", -height / 2).attr("y", -60).attr("text-anchor", "middle").text("Fatalities per year");
   g.append("text").attr("x", width / 2).attr("y", height + 40).attr("text-anchor", "middle").text("Year");
 }
