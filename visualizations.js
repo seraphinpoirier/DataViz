@@ -767,6 +767,170 @@ function createRidgelinePlot() {
   });
 }
 
+function createRegionalLineChart() {
+  if (!loadedData.fatalities) return;
+
+  const container = d3.select("#linear-chart");
+  container.html("");
+
+  // Regions we want to plot
+  const REGIONS = ["Africa", "Middle East & Asia"];
+
+  // --- 1) Build region toggle UI -----------------------------------
+  const toolbar = container.append("div").attr("class", "linechart-toolbar");
+  toolbar.append("label").style("font-weight","700").text("Regions:");
+
+  const info = toolbar.append("div")
+    .style("font-size","13px")
+    .style("color","#444")
+    .style("margin-bottom","6px")
+    .text("Hover a line to highlight it");
+
+  // --- 2) Prepare data ---------------------------------------------
+  const allYears = Array.from(new Set(loadedData.fatalities.map(d=>+d.year)))
+    .filter(y => y >= 2018 && y <= 2025)
+    .sort((a,b)=>a-b);
+
+  // Aggregate fatalities by region + year
+  const regionYear = {};
+  REGIONS.forEach(r => regionYear[r] = allYears.map(y => ({year:y, fatalities:0})));
+
+  loadedData.fatalities.forEach(d => {
+    REGIONS.forEach(region => {
+      if (regionGroups[region].some(c => d.country.includes(c) || c.includes(d.country))) {
+        const yr = +d.year;
+        if (yr >= 2018 && yr <= 2025) {
+          const bucket = regionYear[region].find(e => e.year === yr);
+          bucket.fatalities += +d.fatalities;
+        }
+      }
+    });
+  });
+
+  // Convert into an array for plotting
+  const linesData = REGIONS.map(region => ({
+    region,
+    values: regionYear[region]
+  }));
+
+  // --- 3) Layout ----------------------------------------------------
+  const outerW = container.node().clientWidth || 960;
+  const margin = {top: 30, right: 20, bottom: 40, left: 60};
+  const width  = Math.max(640, Math.min(960, outerW)) - margin.left - margin.right;
+  const height = 420 - margin.top - margin.bottom;
+
+  const svg = container.append("svg")
+    .attr("viewBox", `0 0 ${width + margin.left + margin.right} ${height + margin.top + margin.bottom}`)
+    .attr("preserveAspectRatio","xMidYMid meet");
+
+  const g = svg.append("g")
+    .attr("transform", `translate(${margin.left},${margin.top})`);
+
+  // --- 4) Scales ----------------------------------------------------
+  const x = d3.scaleLinear()
+    .domain(d3.extent(allYears))
+    .range([0, width]);
+
+  const y = d3.scaleLog()
+    .domain([
+      1,
+      d3.max(linesData, r => d3.max(r.values, v => v.fatalities)) || 10
+    ])
+    .range([height, 0])
+    .nice();
+
+  // --- 5) Axes ------------------------------------------------------
+  g.append("g")
+    .attr("transform", `translate(0,${height})`)
+    .call(d3.axisBottom(x).ticks(allYears.length).tickFormat(d3.format("d")));
+
+  g.append("g")
+    .call(
+      d3.axisLeft(y)
+        .tickValues([1,10,100,1000,10000,100000,1000000])
+        .tickFormat(d3.format(".0s"))
+    );
+
+  g.append("text")
+    .attr("x", width/2)
+    .attr("y", height+32)
+    .attr("text-anchor","middle")
+    .text("Year");
+
+  g.append("text")
+    .attr("x", -height/2)
+    .attr("y", -40)
+    .attr("text-anchor","middle")
+    .attr("transform","rotate(-90)")
+    .text("Fatalities");
+
+  // --- 6) Line generator --------------------------------------------
+  const lineGen = d3.line()
+    .x(d => x(d.year))
+    .y(d => y(Math.max(1, d.fatalities)))
+    .curve(d3.curveMonotoneX);
+
+  // --- 7) Draw lines -------------------------------------------------
+  const color = d3.scaleOrdinal()
+    .domain(REGIONS)
+    .range(["#b2182b","#2166ac"]);
+
+  const lines = g.selectAll(".region-line")
+    .data(linesData)
+    .enter()
+    .append("path")
+    .attr("class","region-line")
+    .attr("fill","none")
+    .attr("stroke", d => color(d.region))
+    .attr("stroke-width", 2)
+    .attr("opacity", 0.85)
+    .attr("d", d => lineGen(d.values));
+
+  // --- 8) Add hover highlighting -----------------------------------
+  lines
+    .style("cursor","pointer")
+    .on("mouseover", function(_, d) {
+      lines.transition().duration(120)
+        .attr("stroke-width", 1)
+        .attr("opacity", 0.25);
+
+      d3.select(this)
+        .transition().duration(120)
+        .attr("stroke-width", 4)
+        .attr("opacity", 1);
+
+      info.text(`Region: ${d.region}`);
+    })
+    .on("mouseout", function() {
+      lines.transition().duration(200)
+        .attr("stroke-width", 2)
+        .attr("opacity", 0.85);
+
+      info.text("Hover a line to highlight it");
+    });
+
+  // --- 9) Add legend ------------------------------------------------
+  const legend = g.append("g")
+    .attr("transform","translate(0,-20)");
+
+  legend.selectAll("g")
+    .data(REGIONS)
+    .enter()
+    .append("g")
+    .attr("transform",(d,i)=>`translate(${i*150},0)`)
+    .each(function(region) {
+      const gLegend = d3.select(this);
+      gLegend.append("rect")
+        .attr("width", 16)
+        .attr("height", 16)
+        .attr("fill", color(region));
+      gLegend.append("text")
+        .attr("x", 22)
+        .attr("y", 12)
+        .text(region);
+    });
+}
+
 
 function createBoxPlot() {
   if (!loadedData.fatalities) return;
