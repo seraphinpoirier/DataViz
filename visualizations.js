@@ -81,6 +81,15 @@ Promise.all([
       events: parseNum(d, "EVENTS"),
     })
   ),
+  d3.csv(
+    "data/number_of_political_violence_events_by_country-month-year_as-of-24Oct2025_0.csv",
+    (d) => ({
+      country: d.COUNTRY,
+      month: d.MONTH,
+      year: +d.YEAR,
+      events: parseNum(d, "EVENTS"),
+    })
+  ),
 ])
   .then(
     ([
@@ -88,12 +97,13 @@ Promise.all([
       civilianFatalities,
       eventsTargetingCivilians,
       demonstrationEvents,
+      politicalViolenceMonthly,
     ]) => {
       loadedData.fatalities = fatalities;
       loadedData.civilianFatalities = civilianFatalities;
       loadedData.eventsTargetingCivilians = eventsTargetingCivilians;
       loadedData.demonstrationEvents = demonstrationEvents;
-
+      loadedData.politicalViolenceMonthly = politicalViolenceMonthly;
       createBarChart();
       createGroupedBarChart();
       createHeatmap();
@@ -103,6 +113,10 @@ Promise.all([
       createHistogram();
       createRidgelinePlot();
       createBoxPlot();
+
+      createRegionalLineChart();
+      createEventTrendAreaChart();
+      createMonthlyEventLines();
     }
   )
   .catch(() => {
@@ -994,4 +1008,528 @@ function createBoxPlot() {
 
   g.append("text").attr("transform", "rotate(-90)").attr("x", -height / 2).attr("y", -60).attr("text-anchor", "middle").text("Fatalities per year");
   g.append("text").attr("x", width / 2).attr("y", height + 40).attr("text-anchor", "middle").text("Year");
+}
+
+function createRegionalLineChart() {
+  if (!loadedData.fatalities) return;
+
+  const container = d3.select("#linear-chart");
+  container.html("");
+
+  // Regions we want to plot
+  const REGIONS = ["Africa", "Middle East & Asia"];
+
+  // --- 1) Build region toggle UI -----------------------------------
+  const toolbar = container.append("div").attr("class", "linechart-toolbar");
+  toolbar.append("label").style("font-weight", "700").text("Regions:");
+
+  const info = toolbar
+    .append("div")
+    .style("font-size", "13px")
+    .style("color", "#444")
+    .style("margin-bottom", "-15px")
+
+  // --- 2) Prepare data ---------------------------------------------
+  const allYears = Array.from(
+    new Set(loadedData.fatalities.map((d) => +d.year))
+  )
+    .filter((y) => y >= 2018 && y <= 2025)
+    .sort((a, b) => a - b);
+
+  // Aggregate fatalities by region + year
+  const regionYear = {};
+  REGIONS.forEach(
+    (r) => (regionYear[r] = allYears.map((y) => ({ year: y, fatalities: 0 })))
+  );
+
+  loadedData.fatalities.forEach((d) => {
+    REGIONS.forEach((region) => {
+      if (
+        regionGroups[region].some(
+          (c) => d.country.includes(c) || c.includes(d.country)
+        )
+      ) {
+        const yr = +d.year;
+        if (yr >= 2018 && yr <= 2025) {
+          const bucket = regionYear[region].find((e) => e.year === yr);
+          bucket.fatalities += +d.fatalities;
+        }
+      }
+    });
+  });
+
+  // Convert into an array for plotting
+  const linesData = REGIONS.map((region) => ({
+    region,
+    values: regionYear[region],
+  }));
+
+  // --- 3) Layout ----------------------------------------------------
+  const outerW = container.node().clientWidth || 960;
+  const margin = { top: 30, right: 20, bottom: 40, left: 60 };
+  const width =
+    Math.max(640, Math.min(960, outerW)) - margin.left - margin.right;
+  const height = 420 - margin.top - margin.bottom;
+
+  const svg = container
+    .append("svg")
+    .attr(
+      "viewBox",
+      `0 0 ${width + margin.left + margin.right} ${
+        height + margin.top + margin.bottom
+      }`
+    )
+    .attr("preserveAspectRatio", "xMidYMid meet");
+
+  const g = svg
+    .append("g")
+    .attr("transform", `translate(${margin.left},${margin.top})`);
+
+  // --- 4) Scales ----------------------------------------------------
+  const x = d3.scaleLinear().domain(d3.extent(allYears)).range([0, width]);
+
+  const y = d3
+    .scaleLog()
+    .domain([
+      1,
+      d3.max(linesData, (r) => d3.max(r.values, (v) => v.fatalities)) || 10,
+    ])
+    .range([height, 0])
+    .nice();
+
+  // --- 5) Axes ------------------------------------------------------
+  g.append("g")
+    .attr("transform", `translate(0,${height})`)
+    .call(d3.axisBottom(x).ticks(allYears.length).tickFormat(d3.format("d")));
+
+  g.append("g").call(
+    d3
+      .axisLeft(y)
+      .tickValues([1, 10, 100, 1000, 10000, 100000, 1000000])
+      .tickFormat(d3.format(".0s"))
+  );
+
+  g.append("text")
+    .attr("x", width / 2)
+    .attr("y", height + 32)
+    .attr("text-anchor", "middle")
+    .text("Year");
+
+  g.append("text")
+    .attr("x", -height / 2)
+    .attr("y", -40)
+    .attr("text-anchor", "middle")
+    .attr("transform", "rotate(-90)")
+    .text("Fatalities");
+
+  // --- 6) Line generator --------------------------------------------
+  const lineGen = d3
+    .line()
+    .x((d) => x(d.year))
+    .y((d) => y(Math.max(1, d.fatalities)))
+    .curve(d3.curveMonotoneX);
+
+  // --- 7) Draw lines -------------------------------------------------
+  const color = d3.scaleOrdinal().domain(REGIONS).range(["#b2182b", "#2166ac"]);
+
+  const lines = g
+    .selectAll(".region-line")
+    .data(linesData)
+    .enter()
+    .append("path")
+    .attr("class", "region-line")
+    .attr("fill", "none")
+    .attr("stroke", (d) => color(d.region))
+    .attr("stroke-width", 2)
+    .attr("opacity", 0.85)
+    .attr("d", (d) => lineGen(d.values));
+
+  // --- 8) Add hover highlighting -----------------------------------
+  lines
+    .style("cursor", "pointer")
+    .on("mouseover", function (_, d) {
+      lines
+        .transition()
+        .duration(120)
+        .attr("stroke-width", 1)
+        .attr("opacity", 0.25);
+
+      d3.select(this)
+        .transition()
+        .duration(120)
+        .attr("stroke-width", 4)
+        .attr("opacity", 1);
+
+      info.text(`Region: ${d.region}`);
+    })
+    .on("mouseout", function () {
+      lines
+        .transition()
+        .duration(200)
+        .attr("stroke-width", 2)
+        .attr("opacity", 0.85);
+
+      info.text("Hover a line to highlight it");
+    });
+
+  // --- 9) Add legend ------------------------------------------------
+  const legend = g.append("g").attr("transform", "translate(0,-20)");
+
+  legend
+    .selectAll("g")
+    .data(REGIONS)
+    .enter()
+    .append("g")
+    .attr("transform", (d, i) => `translate(${i * 150},0)`)
+    .each(function (region) {
+      const gLegend = d3.select(this);
+      gLegend
+        .append("rect")
+        .attr("width", 16)
+        .attr("height", 16)
+        .attr("fill", color(region));
+      gLegend.append("text").attr("x", 22).attr("y", 12).text(region);
+    });
+}
+
+function createEventTrendAreaChart() {
+  if (!loadedData.eventsTargetingCivilians || !loadedData.demonstrationEvents)
+    return;
+
+  const container = d3.select("#area-chart");
+  container.html("");
+
+  const years = Array.from(
+    new Set([
+      ...loadedData.eventsTargetingCivilians.map((d) => +d.year),
+      ...loadedData.demonstrationEvents.map((d) => +d.year),
+    ])
+  )
+    .filter((year) => year >= 2018 && year <= 2025)
+    .sort((a, b) => a - b);
+
+  const targetingByYear = d3.rollup(
+    loadedData.eventsTargetingCivilians,
+    (v) => d3.sum(v, (d) => d.events),
+    (d) => d.year
+  );
+  const demosByYear = d3.rollup(
+    loadedData.demonstrationEvents,
+    (v) => d3.sum(v, (d) => d.events),
+    (d) => d.year
+  );
+
+  const data = years.map((year) => ({
+    year,
+    demonstrations: demosByYear.get(year) || 0,
+    targeting: targetingByYear.get(year) || 0,
+  }));
+
+  const margin = { top: 30, right: 20, bottom: 40, left: 60 };
+  const outerW = container.node().clientWidth || 960;
+  const width =
+    Math.max(640, Math.min(960, outerW)) - margin.left - margin.right;
+  const height = 420 - margin.top - margin.bottom;
+
+  const svg = container
+    .append("svg")
+    .attr(
+      "viewBox",
+      `0 0 ${width + margin.left + margin.right} ${
+        height + margin.top + margin.bottom
+      }`
+    )
+    .attr("preserveAspectRatio", "xMidYMid meet");
+
+  const g = svg
+    .append("g")
+    .attr("transform", `translate(${margin.left},${margin.top})`);
+
+  const x = d3.scaleLinear().domain(d3.extent(years)).range([0, width]);
+  const stackKeys = ["demonstrations", "targeting"];
+  const stack = d3.stack().keys(stackKeys);
+  const stacked = stack(data);
+  const y = d3
+    .scaleLinear()
+    .domain([0, d3.max(stacked, (series) => d3.max(series, (d) => d[1])) || 1])
+    .nice()
+    .range([height, 0]);
+
+  const color = d3
+    .scaleOrdinal()
+    .domain(stackKeys)
+    .range([colors.quinary, colors.secondary]);
+
+  const area = d3
+    .area()
+    .x((d) => x(d.data.year))
+    .y0((d) => y(d[0]))
+    .y1((d) => y(d[1]))
+    .curve(d3.curveMonotoneX);
+
+  g.selectAll(".area-layer")
+    .data(stacked)
+    .enter()
+    .append("path")
+    .attr("class", "area-layer")
+    .attr("fill", (d) => color(d.key))
+    .attr("opacity", 0.85)
+    .attr("d", area);
+
+  g.append("g")
+    .attr("transform", `translate(0,${height})`)
+    .call(d3.axisBottom(x).ticks(years.length).tickFormat(d3.format("d")));
+  g.append("g").call(d3.axisLeft(y).ticks(6, "~s"));
+
+  g.append("text")
+    .attr("x", width / 2)
+    .attr("y", height + 32)
+    .attr("text-anchor", "middle")
+    .text("Year");
+  g.append("text")
+    .attr("x", -height / 2)
+    .attr("y", -40)
+    .attr("text-anchor", "middle")
+    .attr("transform", "rotate(-90)")
+    .text("Number of events");
+
+  const legend = g.append("g").attr("transform", "translate(0,-20)");
+  stackKeys.forEach((key, i) => {
+    const row = legend.append("g").attr("transform", `translate(${i * 180},0)`);
+    row
+      .append("rect")
+      .attr("width", 16)
+      .attr("height", 16)
+      .attr("fill", color(key));
+    row
+      .append("text")
+      .attr("x", 22)
+      .attr("y", 12)
+      .text(
+        key === "demonstrations" ? "Demonstrations" : "Targeting civilians"
+      );
+  });
+
+  const lookup = new Map(data.map((d) => [d.year, d]));
+  const tooltip = container.append("div").attr("class", "tooltip");
+  const overlay = g
+    .append("rect")
+    .attr("class", "overlay")
+    .attr("fill", "transparent")
+    .attr("width", width)
+    .attr("height", height)
+    .on("mousemove", (event) => {
+      const [mx] = d3.pointer(event);
+      const yearRaw = Math.round(x.invert(mx));
+      const year = Math.min(
+        Math.max(years[0], yearRaw),
+        years[years.length - 1]
+      );
+      const point = lookup.get(year);
+      if (!point) {
+        tooltip.classed("visible", false);
+        return;
+      }
+      tooltip
+        .classed("visible", true)
+        .style("left", event.pageX + 10 + "px")
+        .style("top", event.pageY - 10 + "px")
+        .html(
+          `Year: ${year}<br>Demonstrations: ${point.demonstrations.toLocaleString()}<br>Targeting Civilians: ${point.targeting.toLocaleString()}`
+        );
+    })
+    .on("mouseout", () => tooltip.classed("visible", false));
+}
+
+function createMonthlyEventLines() {
+  if (!loadedData.politicalViolenceMonthly) return;
+
+  const container = d3.select("#monthly-lines");
+  if (container.empty()) return;
+
+  container.html("");
+
+  const MONTHS = [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+  ];
+  const monthIndex = new Map(MONTHS.map((m, i) => [m, i]));
+  const parseDate = (year, month) => new Date(year, monthIndex.get(month), 1);
+
+  const filtered = loadedData.politicalViolenceMonthly.filter(
+    (d) =>
+      d.year >= 2018 &&
+      d.year <= 2024 &&
+      monthIndex.has(d.month) &&
+      d.events > 0
+  );
+
+  if (!filtered.length) return;
+
+  const totals = d3.rollup(
+    filtered,
+    (v) => d3.sum(v, (d) => d.events),
+    (d) => d.country
+  );
+
+  const topCountries = Array.from(totals, ([country, events]) => ({
+    country,
+    events,
+  }))
+    .sort((a, b) => b.events - a.events)
+    .slice(0, 4)
+    .map((d) => d.country);
+
+  const series = topCountries
+    .map((country) => {
+      const values = filtered
+        .filter((d) => d.country === country)
+        .map((d) => ({
+          date: parseDate(d.year, d.month),
+          events: d.events,
+        }))
+        .sort((a, b) => a.date - b.date);
+      return { country, values };
+    })
+    .filter((d) => d.values.length);
+
+  if (!series.length) return;
+
+  const allDates = series.flatMap((s) => s.values.map((v) => v.date));
+  const allEvents = series.flatMap((s) => s.values.map((v) => v.events));
+
+  const margin = { top: 40, right: 160, bottom: 50, left: 70 };
+  const outerW = container.node().clientWidth || 960;
+  const width =
+    Math.max(640, Math.min(960, outerW)) - margin.left - margin.right;
+  const height = 440 - margin.top - margin.bottom;
+
+  const svg = container
+    .append("svg")
+    .attr(
+      "viewBox",
+      `0 0 ${width + margin.left + margin.right} ${
+        height + margin.top + margin.bottom
+      }`
+    )
+    .attr("preserveAspectRatio", "xMidYMid meet");
+
+  const g = svg
+    .append("g")
+    .attr("transform", `translate(${margin.left},${margin.top})`);
+
+  const x = d3.scaleTime().domain(d3.extent(allDates)).range([0, width]);
+  const y = d3
+    .scaleLinear()
+    .domain([0, d3.max(allEvents) || 1])
+    .nice()
+    .range([height, 0]);
+
+  const color = d3
+    .scaleOrdinal()
+    .domain(topCountries)
+    .range(["#0f62fe", "#ff6f00", "#23c16b", "#c026d3"]);
+
+  const line = d3
+    .line()
+    .curve(d3.curveMonotoneX)
+    .x((d) => x(d.date))
+    .y((d) => y(d.events));
+
+  const tooltip = container.append("div").attr("class", "tooltip");
+
+  const lineGroups = g
+    .selectAll(".monthly-line")
+    .data(series)
+    .enter()
+    .append("g")
+    .attr("class", "monthly-line");
+
+  lineGroups
+    .append("path")
+    .attr("fill", "none")
+    .attr("stroke-width", 2.5)
+    .attr("stroke", (d) => color(d.country))
+    .attr("d", (d) => line(d.values))
+    .attr("opacity", 0.9);
+
+  lineGroups
+    .selectAll("circle")
+    .data((d) => d.values.map((v) => ({ ...v, country: d.country })))
+    .enter()
+    .append("circle")
+    .attr("r", 3)
+    .attr("fill", (d) => color(d.country))
+    .attr("cx", (d) => x(d.date))
+    .attr("cy", (d) => y(d.events))
+    .on("mouseover", function (event, d) {
+      d3.select(this).attr("r", 5);
+      tooltip
+        .classed("visible", true)
+        .style("left", event.pageX + 10 + "px")
+        .style("top", event.pageY - 10 + "px")
+        .html(
+          `${d.country}<br>${d3.timeFormat("%b %Y")(
+            d.date
+          )}<br>${d.events.toLocaleString()} events`
+        );
+    })
+    .on("mouseout", function () {
+      d3.select(this).attr("r", 3);
+      tooltip.classed("visible", false);
+    });
+
+  g.append("g")
+    .attr("transform", `translate(0,${height})`)
+    .call(
+      d3
+        .axisBottom(x)
+        .ticks(d3.timeYear.every(1))
+        .tickFormat(d3.timeFormat("%Y"))
+    );
+  g.append("g").call(d3.axisLeft(y).ticks(6, "~s"));
+
+  g.append("text")
+    .attr("x", width / 2)
+    .attr("y", height + 40)
+    .attr("text-anchor", "middle")
+    .text("Year");
+
+  g.append("text")
+    .attr("x", -height / 2)
+    .attr("y", -50)
+    .attr("text-anchor", "middle")
+    .attr("transform", "rotate(-90)")
+    .text("Monthly events");
+
+  const legend = g
+    .append("g")
+    .attr("transform", `translate(${width + 20}, 0)`)
+    .attr("class", "legend");
+
+  legend
+    .selectAll("g")
+    .data(topCountries)
+    .enter()
+    .append("g")
+    .attr("transform", (d, i) => `translate(0, ${i * 22})`)
+    .each(function (country) {
+      const row = d3.select(this);
+      row
+        .append("rect")
+        .attr("width", 16)
+        .attr("height", 16)
+        .attr("fill", color(country));
+      row.append("text").attr("x", 22).attr("y", 12).text(country);
+    });
 }
