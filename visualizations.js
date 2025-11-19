@@ -81,6 +81,15 @@ Promise.all([
       events: parseNum(d, "EVENTS"),
     })
   ),
+  d3.csv(
+    "data/number_of_political_violence_events_by_country-month-year_as-of-24Oct2025_0.csv",
+    (d) => ({
+      country: d.COUNTRY,
+      month: d.MONTH,
+      year: +d.YEAR,
+      events: parseNum(d, "EVENTS"),
+    })
+  ),
 ])
   .then(
     ([
@@ -88,12 +97,13 @@ Promise.all([
       civilianFatalities,
       eventsTargetingCivilians,
       demonstrationEvents,
+      politicalViolenceMonthly,
     ]) => {
       loadedData.fatalities = fatalities;
       loadedData.civilianFatalities = civilianFatalities;
       loadedData.eventsTargetingCivilians = eventsTargetingCivilians;
       loadedData.demonstrationEvents = demonstrationEvents;
-
+      loadedData.politicalViolenceMonthly = politicalViolenceMonthly;
       createBarChart();
       createGroupedBarChart();
       createHeatmap();
@@ -106,6 +116,7 @@ Promise.all([
 
       createRegionalLineChart();
       createEventTrendAreaChart();
+      createMonthlyEventLines();
     }
   )
   .catch(() => {
@@ -1328,4 +1339,197 @@ function createEventTrendAreaChart() {
         );
     })
     .on("mouseout", () => tooltip.classed("visible", false));
+}
+
+function createMonthlyEventLines() {
+  if (!loadedData.politicalViolenceMonthly) return;
+
+  const container = d3.select("#monthly-lines");
+  if (container.empty()) return;
+
+  container.html("");
+
+  const MONTHS = [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+  ];
+  const monthIndex = new Map(MONTHS.map((m, i) => [m, i]));
+  const parseDate = (year, month) => new Date(year, monthIndex.get(month), 1);
+
+  const filtered = loadedData.politicalViolenceMonthly.filter(
+    (d) =>
+      d.year >= 2018 &&
+      d.year <= 2024 &&
+      monthIndex.has(d.month) &&
+      d.events > 0
+  );
+
+  if (!filtered.length) return;
+
+  const totals = d3.rollup(
+    filtered,
+    (v) => d3.sum(v, (d) => d.events),
+    (d) => d.country
+  );
+
+  const topCountries = Array.from(totals, ([country, events]) => ({
+    country,
+    events,
+  }))
+    .sort((a, b) => b.events - a.events)
+    .slice(0, 4)
+    .map((d) => d.country);
+
+  const series = topCountries
+    .map((country) => {
+      const values = filtered
+        .filter((d) => d.country === country)
+        .map((d) => ({
+          date: parseDate(d.year, d.month),
+          events: d.events,
+        }))
+        .sort((a, b) => a.date - b.date);
+      return { country, values };
+    })
+    .filter((d) => d.values.length);
+
+  if (!series.length) return;
+
+  const allDates = series.flatMap((s) => s.values.map((v) => v.date));
+  const allEvents = series.flatMap((s) => s.values.map((v) => v.events));
+
+  const margin = { top: 40, right: 160, bottom: 50, left: 70 };
+  const outerW = container.node().clientWidth || 960;
+  const width =
+    Math.max(640, Math.min(960, outerW)) - margin.left - margin.right;
+  const height = 440 - margin.top - margin.bottom;
+
+  const svg = container
+    .append("svg")
+    .attr(
+      "viewBox",
+      `0 0 ${width + margin.left + margin.right} ${
+        height + margin.top + margin.bottom
+      }`
+    )
+    .attr("preserveAspectRatio", "xMidYMid meet");
+
+  const g = svg
+    .append("g")
+    .attr("transform", `translate(${margin.left},${margin.top})`);
+
+  const x = d3.scaleTime().domain(d3.extent(allDates)).range([0, width]);
+  const y = d3
+    .scaleLinear()
+    .domain([0, d3.max(allEvents) || 1])
+    .nice()
+    .range([height, 0]);
+
+  const color = d3
+    .scaleOrdinal()
+    .domain(topCountries)
+    .range(["#0f62fe", "#ff6f00", "#23c16b", "#c026d3"]);
+
+  const line = d3
+    .line()
+    .curve(d3.curveMonotoneX)
+    .x((d) => x(d.date))
+    .y((d) => y(d.events));
+
+  const tooltip = container.append("div").attr("class", "tooltip");
+
+  const lineGroups = g
+    .selectAll(".monthly-line")
+    .data(series)
+    .enter()
+    .append("g")
+    .attr("class", "monthly-line");
+
+  lineGroups
+    .append("path")
+    .attr("fill", "none")
+    .attr("stroke-width", 2.5)
+    .attr("stroke", (d) => color(d.country))
+    .attr("d", (d) => line(d.values))
+    .attr("opacity", 0.9);
+
+  lineGroups
+    .selectAll("circle")
+    .data((d) => d.values.map((v) => ({ ...v, country: d.country })))
+    .enter()
+    .append("circle")
+    .attr("r", 3)
+    .attr("fill", (d) => color(d.country))
+    .attr("cx", (d) => x(d.date))
+    .attr("cy", (d) => y(d.events))
+    .on("mouseover", function (event, d) {
+      d3.select(this).attr("r", 5);
+      tooltip
+        .classed("visible", true)
+        .style("left", event.pageX + 10 + "px")
+        .style("top", event.pageY - 10 + "px")
+        .html(
+          `${d.country}<br>${d3.timeFormat("%b %Y")(
+            d.date
+          )}<br>${d.events.toLocaleString()} events`
+        );
+    })
+    .on("mouseout", function () {
+      d3.select(this).attr("r", 3);
+      tooltip.classed("visible", false);
+    });
+
+  g.append("g")
+    .attr("transform", `translate(0,${height})`)
+    .call(
+      d3
+        .axisBottom(x)
+        .ticks(d3.timeYear.every(1))
+        .tickFormat(d3.timeFormat("%Y"))
+    );
+  g.append("g").call(d3.axisLeft(y).ticks(6, "~s"));
+
+  g.append("text")
+    .attr("x", width / 2)
+    .attr("y", height + 40)
+    .attr("text-anchor", "middle")
+    .text("Year");
+
+  g.append("text")
+    .attr("x", -height / 2)
+    .attr("y", -50)
+    .attr("text-anchor", "middle")
+    .attr("transform", "rotate(-90)")
+    .text("Monthly events");
+
+  const legend = g
+    .append("g")
+    .attr("transform", `translate(${width + 20}, 0)`)
+    .attr("class", "legend");
+
+  legend
+    .selectAll("g")
+    .data(topCountries)
+    .enter()
+    .append("g")
+    .attr("transform", (d, i) => `translate(0, ${i * 22})`)
+    .each(function (country) {
+      const row = d3.select(this);
+      row
+        .append("rect")
+        .attr("width", 16)
+        .attr("height", 16)
+        .attr("fill", color(country));
+      row.append("text").attr("x", 22).attr("y", 12).text(country);
+    });
 }
