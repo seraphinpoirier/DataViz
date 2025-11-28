@@ -18,6 +18,8 @@
   </head>
 
   <body class="site-body visualizations-page">
+    <div id="chart-tooltip" class="chart-tooltip"></div>
+
     <!-- TOP NAV -->
     <div class="topnav">
       <a class="brand" href="index.html">The Vizionaries</a>
@@ -230,33 +232,33 @@
         </header>
 
         <div class="chart-grid map-grid">
+
           <article class="chart-card chart-span-2">
             <header class="chart-card-header">
               <h3>Global fatalities choropleth</h3>
               <p>Countries shaded by total reported fatalities, 2018–2024.</p>
             </header>
-            <div id="choropleth-map" class="chart-canvas chart-map"></div>
-            <p class="map-caption">
-              A Natural Earth projection highlights hotspots that mirror trends
-              visible in the comparison and time-series charts.
-            </p>
+            <div id="choropleth-map" class="chart-canvas chart-map"></div>           
           </article>
 
-          <article class="chart-card">
+          <article class="chart-card chart-span-2">
             <header class="chart-card-header">
-              <h3>Map 2</h3>
-              <p>Reserved for a future spatial view (e.g. conflict corridors).</p>
+              <h3>Proportional symbol map</h3>
+              <p class="map-caption">Circles scaled by total reported fatalities highlight countries with the greatest concentration of conflict-related deaths. 
+                Larger bubbles indicate higher severity, offering a quick view of global hotspots. </p>
             </header>
-            <div class="chart-canvas chart-medium"></div>
+            <div id="proportional-symbol-map" class="chart-canvas chart-map"></div>
           </article>
 
-          <article class="chart-card">
+          <article class="chart-card chart-span-2">
             <header class="chart-card-header">
-              <h3>Map 3</h3>
-              <p>Reserved for a future spatial view (e.g. civilian-specific map).</p>
+              <h3>Fatalities Cartogram</h3>
+              <p class="map-caption">Countries resized into proportional circles based on total fatalities, distorting geography to emphasize where conflict impact is most intense.
+                 The cartogram reveals patterns that traditional maps can obscure.</p>
             </header>
-            <div class="chart-canvas chart-medium"></div>
+            <div id="cartogram-map" class="chart-canvas chart-map"></div>
           </article>
+
         </div>
       </section>
     </main>
@@ -264,29 +266,35 @@
     <footer class="footer">
       <p>&copy; <span id="footer-year"></span> Vizionaries</p>
     </footer>
-
     <script>
       // Footer year
       document.getElementById("footer-year").textContent =
         new Date().getFullYear();
-
+    
       // Tab switching
       const tabButtons = document.querySelectorAll(".viz-tab-button");
       const tabPanels = document.querySelectorAll(".viz-tab-panel");
-
+    
       tabButtons.forEach((btn) => {
         btn.addEventListener("click", () => {
           const targetId = btn.dataset.target;
-
+    
           tabButtons.forEach((b) => b.classList.remove("active"));
           btn.classList.add("active");
-
+    
           tabPanels.forEach((panel) => {
             panel.classList.toggle("active", panel.id === targetId);
+          });
+    
+          window.scrollTo({
+            top: 0,
+            left: 0,
+            behavior: "auto" // or "smooth" if you want an animation
           });
         });
       });
     </script>
+    
 
     <script src="visualizations.js"></script>
   </body>

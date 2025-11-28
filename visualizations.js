@@ -1,3 +1,18 @@
+const tooltipGlobal = d3.select("#chart-tooltip");
+
+function showTip(html, x, y) {
+  tooltipGlobal
+    .style("opacity", 1)
+    .html(html)
+    .style("left", x + 12 + "px")
+    .style("top", y + 12 + "px");
+}
+
+function hideTip() {
+  tooltipGlobal.style("opacity", 0);
+}
+
+
 // Shared colors & helpers
 const colors = {
   primary: "#4a90e2",
@@ -155,7 +170,10 @@ Promise.all([
       createRegionalLineChart();
       createEventTrendAreaChart();
       createMonthlyEventLines();
+
       createChoropleth();
+      createProportionalSymbolMap();
+      createCartogram();
     }
   )
   .catch(() => {
@@ -1611,6 +1629,8 @@ function createMonthlyEventLines() {
     });
 }
 
+
+
 function createChoropleth() {
   if (!loadedData.fatalities || !worldFeatures || !worldFeatures.length) return;
 
@@ -1728,4 +1748,305 @@ function createChoropleth() {
     .attr("text-anchor", "middle")
     .attr("fill", "#374151")
     .text("Total fatalities (2018–2024)");
+}
+
+
+function createProportionalSymbolMap() {
+  if (!loadedData.fatalities || !worldFeatures || !worldFeatures.length) return;
+
+  const container = d3.select("#proportional-symbol-map"); 
+  if (container.empty()) return;
+
+  container.html("");
+
+  const width = container.node().clientWidth || 900;
+  const height = 700;
+
+  const svg = container
+    .append("svg")
+    .attr("viewBox", `0 0 ${width} ${height}`)
+    .attr("preserveAspectRatio", "xMidYMid meet");
+
+  // 1. Aggregate total fatalities by country (same as main choropleth)
+  const fatalitiesByCountry = d3.rollup(
+    loadedData.fatalities,
+    (records) => d3.sum(records, (d) => d.fatalities || 0),
+    (d) => canonicalCountryName(d.country)
+  );
+
+  const maxValue = d3.max(fatalitiesByCountry.values()) || 1;
+
+  // 2. Basemap projection
+  const projection = d3
+    .geoNaturalEarth1()
+    .fitSize([width, height], { type: "FeatureCollection", features: worldFeatures });
+
+  const path = d3.geoPath(projection);
+  const tooltip = container.append("div").attr("class", "tooltip");
+
+  // 3. Light basemap
+  svg
+    .append("g")
+    .selectAll("path")
+    .data(worldFeatures)
+    .enter()
+    .append("path")
+    .attr("d", path)
+    .attr("fill", "#f9fafb")
+    .attr("stroke", "#e5e7eb")
+    .attr("stroke-width", 0.5);
+
+  // 4. Circle size scale (square-root)
+  const maxRadius = 24;
+  const radiusScale = d3
+    .scaleSqrt()
+    .domain([0, maxValue])
+    .range([0, maxRadius]);
+
+  const bubbles = svg.append("g").attr("class", "bubbles");
+
+  // 5. Draw one bubble at each country's centroid, sized by total fatalities
+  worldFeatures.forEach((feature) => {
+    const countryName = canonicalCountryName(feature.properties.name);
+    const total = fatalitiesByCountry.get(countryName) || 0;
+    if (!total) return;
+
+    const centroid = d3.geoCentroid(feature);
+    const projected = projection(centroid);
+    if (!projected) return;
+
+    const [x, y] = projected;
+
+    bubbles
+      .append("circle")
+      .attr("cx", x)
+      .attr("cy", y)
+      .attr("r", radiusScale(total))
+      .attr("fill", "rgba(185, 28, 28, 0.75)")
+      .attr("stroke", "#7f1d1d")
+      .attr("stroke-width", 0.7)
+      .on("mousemove", function (event) {
+        tooltip
+          .classed("visible", true)
+          .style("left", event.pageX + 10 + "px")
+          .style("top", event.pageY - 10 + "px")
+          .html(
+            `${feature.properties.name}<br>` +
+            `${total.toLocaleString()} fatalities (2018–2024)`
+          );
+        d3.select(this).attr("stroke-width", 1.2);
+      })
+      .on("mouseout", function () {
+        tooltip.classed("visible", false);
+        d3.select(this).attr("stroke-width", 0.7);
+      });
+  });
+
+  // 6. Bubble legend with three distinct values
+  const legend = svg
+    .append("g")
+    .attr("transform", `translate(${width - 150}, ${height - 150})`);
+
+  const legendValues = [
+    maxValue * 0.1,
+    maxValue * 0.5,
+    maxValue
+  ].map((v) => Math.max(1, Math.round(v)));
+
+  legendValues.forEach((value, i) => {
+    const r = radiusScale(value);
+    const y = 0 + i * (r * 2 + 10);
+
+    legend
+      .append("circle")
+      .attr("cx", 40)
+      .attr("cy", y)
+      .attr("r", r)
+      .attr("fill", "rgba(185, 28, 28, 0.75)")
+      .attr("stroke", "#7f1d1d")
+      .attr("stroke-width", 0.7);
+
+    legend
+      .append("text")
+      .attr("x", r + 48)
+      .attr("y", y + 4)
+      .attr("fill", "#374151")
+      .style("font-size", 10)
+      .text(`${d3.format(".2s")(value)} fatalities`);
+  });
+
+  legend
+    .append("text")
+    .attr("x", 0)
+    .attr("y", -20)
+    .attr("fill", "#374151")
+    .style("font-size", 11)
+    .style("font-weight", "600")
+    .text("Event severity (bubbles)");
+}
+
+function createCartogram() {
+  if (!loadedData.fatalities || !worldFeatures || !worldFeatures.length) return;
+
+  const container = d3.select("#cartogram-map");
+  if (container.empty()) return;
+
+  container.html("");
+
+  const width = container.node().clientWidth || 900;
+  const height = 650;
+
+  const svg = container
+    .append("svg")
+    .attr("viewBox", `0 0 ${width} ${height}`)
+    .attr("preserveAspectRatio", "xMidYMid meet");
+
+  // 1. Aggregate total fatalities by country
+  const fatalitiesByCountry = d3.rollup(
+    loadedData.fatalities,
+    (records) => d3.sum(records, (d) => d.fatalities || 0),
+    (d) => canonicalCountryName(d.country)
+  );
+
+  const maxValue = d3.max(fatalitiesByCountry.values()) || 1;
+
+  // 2. Projection for initial positions
+  const projection = d3
+    .geoNaturalEarth1()
+    .fitSize([width, height], { type: "FeatureCollection", features: worldFeatures });
+
+  const path = d3.geoPath(projection);
+
+  svg
+    .append("g")
+    .selectAll("path")
+    .data(worldFeatures)
+    .enter()
+    .append("path")
+    .attr("d", path)
+    .attr("fill", "#f9fafb")
+    .attr("stroke", "#e5e7eb")
+    .attr("stroke-width", 0.4)
+    .attr("opacity", 0.7);
+
+  const tooltip = container.append("div").attr("class", "tooltip");
+
+  // 3. Radius scale and cartogram nodes
+  const maxRadius = 32;
+  const radiusScale = d3
+    .scaleSqrt()
+    .domain([0, maxValue])
+    .range([0, maxRadius]);
+
+  const nodes = [];
+
+  worldFeatures.forEach((feature) => {
+    const countryName = canonicalCountryName(feature.properties.name);
+    const value = fatalitiesByCountry.get(countryName) || 0;
+    if (!value) return;
+
+    const centroid = d3.geoCentroid(feature);
+    const projected = projection(centroid);
+    if (!projected) return;
+
+    const [x0, y0] = projected;
+
+    nodes.push({
+      id: feature.id || countryName,
+      country: feature.properties.name,
+      value,
+      radius: radiusScale(value),
+      x: x0,
+      y: y0,
+      x0,
+      y0,
+    });
+  });
+
+  // 4. Force simulation (Dorling cartogram)
+  const simulation = d3
+    .forceSimulation(nodes)
+    .force("x", d3.forceX((d) => d.x0).strength(0.25))
+    .force("y", d3.forceY((d) => d.y0).strength(0.25))
+    .force("collide", d3.forceCollide((d) => d.radius + 1))
+    .stop();
+
+  // Run a fixed number of ticks synchronously
+  for (let i = 0; i < 150; ++i) simulation.tick();
+  simulation.stop();
+
+  // 5. Draw cartogram circles
+  const circles = svg
+    .append("g")
+    .attr("class", "cartogram-bubbles")
+    .selectAll("circle")
+    .data(nodes)
+    .enter()
+    .append("circle")
+    .attr("cx", (d) => d.x)
+    .attr("cy", (d) => d.y)
+    .attr("r", (d) => d.radius)
+    .attr("fill", (d) =>
+      d3.interpolateYlOrRd(d.value / maxValue || 0)
+    )
+    .attr("stroke", "#7f1d1d")
+    .attr("stroke-width", 0.7)
+    .attr("opacity", 0.92)
+    .on("mousemove", function (event, d) {
+      tooltip
+        .classed("visible", true)
+        .style("left", event.pageX + 10 + "px")
+        .style("top", event.pageY - 10 + "px")
+        .html(
+          `${d.country}<br>` +
+            `${d.value.toLocaleString()} fatalities (2018–2024)`
+        );
+      d3.select(this).attr("stroke-width", 1.2);
+    })
+    .on("mouseout", function () {
+      tooltip.classed("visible", false);
+      d3.select(this).attr("stroke-width", 0.7);
+    });
+
+  // 6. Legend (size + color)
+  const legend = svg
+    .append("g")
+    .attr("transform", `translate(${width - 180}, ${height - 180})`);
+
+  const legendValues = [
+    maxValue * 0.1,
+    maxValue * 0.5,
+    maxValue,
+  ].map((v) => Math.max(1, Math.round(v)));
+
+  legendValues.forEach((value, i) => {
+    const r = radiusScale(value);
+    const y = 40 + i * (r * 2 + 12);
+
+    legend
+      .append("circle")
+      .attr("cx", 0)
+      .attr("cy", y)
+      .attr("r", r)
+      .attr("fill", d3.interpolateYlOrRd(value / maxValue))
+      .attr("stroke", "#7f1d1d")
+      .attr("stroke-width", 0.7);
+
+    legend
+      .append("text")
+      .attr("x", r + 8)
+      .attr("y", y + 4)
+      .attr("fill", "#374151")
+      .style("font-size", 10)
+      .text(`${d3.format(".2s")(value)} fatalities`);
+  });
+
+  legend
+    .append("text")
+    .attr("x", 0)
+    .attr("y", 12)
+    .attr("fill", "#374151")
+    .style("font-size", 11)
+    .style("font-weight", "600")
+    .text("Cartogram – total fatalities");
 }

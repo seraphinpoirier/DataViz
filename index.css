@@ -11,7 +11,10 @@
     --accent-3: #2f4858;
   }
   
-  /* BASIC RESET */
+  /* ==============
+     RESET / BASE
+     ============== */
+  
   *,
   *::before,
   *::after {
@@ -22,76 +25,91 @@
     scroll-behavior: smooth;
   }
   
-body.site-body {
+  body.site-body {
     margin: 0;
     font-family: "Fira Sans", system-ui, -apple-system, BlinkMacSystemFont,
       "Segoe UI", sans-serif;
-    background: radial-gradient(circle at 20% 0%, rgba(255, 243, 224, 0.55), transparent 55%),
+    background:
+      radial-gradient(circle at 20% 0%, rgba(255, 243, 224, 0.55), transparent 55%),
       linear-gradient(135deg, var(--bg) 0%, var(--bg-accent) 70%, #ffffff 100%);
     color: var(--text-main);
     line-height: 1.6;
   }
-
-.site-main,
-.visualizations-shell {
+  
+  .site-main,
+  .visualizations-shell {
     width: min(1180px, calc(100% - 3rem));
     margin: 0 auto 80px;
     display: flex;
     flex-direction: column;
     gap: 32px;
   }
-
-.info-card,
-.intro-panel,
-.viz-group {
+  
+  .page-wrapper {
+    max-width: 1180px;
+    margin: 0 auto 80px;
+    padding: 0 1.5rem;
+  }
+  
+  .card {
+    background: var(--card-bg);
+    border-radius: 24px;
+    box-shadow: 0 24px 60px rgba(15, 23, 42, 0.08);
+    padding: 2.5rem;
+    border: 1px solid rgba(15, 23, 42, 0.05);
+  }
+  
+  /* Shared card styles */
+  .info-card,
+  .intro-panel,
+  .viz-group {
     background: var(--card-bg);
     border-radius: 30px;
     padding: clamp(1.8rem, 3vw, 2.6rem);
     box-shadow: 0 24px 60px rgba(15, 23, 42, 0.08);
     border: 1px solid rgba(15, 23, 42, 0.05);
   }
-
-.data-card {
+  
+  .data-card {
     display: grid;
     gap: 24px;
     grid-template-columns: minmax(0, 1.6fr) minmax(240px, 0.8fr);
     align-items: start;
   }
-
-.data-highlight {
+  
+  .data-highlight {
     background: rgba(176, 42, 55, 0.06);
     border-radius: 20px;
     padding: 1.5rem;
   }
-
-.key-points {
+  
+  .key-points {
     margin: 0;
     padding-left: 1rem;
     color: var(--muted);
   }
-
-.info-card ul,
-.key-points,
-.sections-card ul {
+  
+  .info-card ul,
+  .key-points {
     line-height: 1.6;
   }
-
-.sections-card .sections-grid {
+  
+  .sections-card .sections-grid {
     margin-top: 1.5rem;
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
     gap: 20px;
   }
-
-.sections-card article {
+  
+  .sections-card article {
     padding: 1.25rem;
     border: 1px solid rgba(31, 41, 51, 0.08);
     border-radius: 18px;
     background: #fefbf6;
   }
-
-.section-tag,
-.group-tag {
+  
+  .section-tag,
+  .group-tag {
     display: inline-flex;
     align-items: center;
     padding: 0.15rem 0.65rem;
@@ -104,46 +122,22 @@ body.site-body {
     color: var(--accent);
     margin-bottom: 8px;
   }
-
-.page-wrapper {
-    max-width: 1180px;
-    margin: 0 auto 80px;
-    padding: 0 1.5rem;
-  }
-
-.page-wrapper > .card,
-.page-wrapper > .sections-stack,
-.page-wrapper > details.section,
-.page-wrapper > nav.page-index {
-    max-width: 1100px;
-    width: 100%;
-    margin-left: auto;
-    margin-right: auto;
-  }
-
-.card {
-    background: var(--card-bg);
-    border-radius: 24px;
-    box-shadow: 0 24px 60px rgba(15, 23, 42, 0.08);
-    padding: 2.5rem;
-    border: 1px solid rgba(15, 23, 42, 0.05);
-  }
   
-  /* LAYOUT WRAPS */
-.header,
-.introduction,
-.page-index .container,
-details.section {
+  /* Layout wrappers sharing same max width */
+  .header,
+  .introduction,
+  .page-index .container,
+  details.section {
     max-width: 1180px;
     margin-left: auto;
     margin-right: auto;
   }
   
-  /* ======================
+  /* ==============
      TOP NAV
-     ====================== */
+     ============== */
   
-.topnav {
+  .topnav {
     position: sticky;
     top: 0;
     z-index: 30;
@@ -155,7 +149,7 @@ details.section {
     justify-content: space-between;
   }
   
-.topnav > .brand {
+  .topnav > .brand {
     font-family: "Roboto Slab", serif;
     font-weight: 800;
     font-size: 1.1rem;
@@ -166,10 +160,10 @@ details.section {
     border-bottom: none !important;
     padding: 0;
   }
-
-.topnav > .brand:hover,
-.topnav > .brand:focus,
-.topnav > .brand:visited {
+  
+  .topnav > .brand:hover,
+  .topnav > .brand:focus,
+  .topnav > .brand:visited {
     color: #ffffff;
     text-decoration: none;
     border-bottom: none;
@@ -180,7 +174,7 @@ details.section {
     gap: 1.6rem;
   }
   
-.topnav a {
+  .topnav a {
     text-decoration: none;
     color: rgba(248, 250, 255, 0.85);
     font-size: 0.95rem;
@@ -194,14 +188,19 @@ details.section {
     border-bottom-color: rgba(255, 255, 255, 0.7);
   }
   
-.topnav a.active {
+  .topnav a.active {
     border-bottom-color: var(--accent);
   }
   
-.hero {
+  /* ==============
+     HERO
+     ============== */
+  
+  .hero {
     margin: 0 auto;
     padding: 80px 7vw 60px;
-    background-image: linear-gradient(110deg, rgba(31, 41, 51, 0.92), rgba(176, 42, 55, 0.88), rgba(217, 119, 6, 0.82)),
+    background-image:
+      linear-gradient(110deg, rgba(31, 41, 51, 0.92), rgba(176, 42, 55, 0.88), rgba(217, 119, 6, 0.82)),
       url("cover_picture_gaza_npr.jpg");
     background-size: cover;
     background-position: center;
@@ -209,48 +208,48 @@ details.section {
     position: relative;
     overflow: hidden;
   }
-
-.hero::after {
+  
+  .hero::after {
     content: "";
     position: absolute;
     inset: 0;
     background: radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.12), transparent 50%);
     pointer-events: none;
   }
-
-.hero-content {
+  
+  .hero-content {
     max-width: 780px;
     position: relative;
     z-index: 1;
   }
-
-.eyebrow {
+  
+  .eyebrow {
     letter-spacing: 0.2em;
     text-transform: uppercase;
     font-size: 0.85rem;
     color: rgba(255, 255, 255, 0.85);
     margin-bottom: 10px;
   }
-
-.hero h1 {
+  
+  .hero h1 {
     margin: 0 0 18px;
     font-size: clamp(2.6rem, 4vw, 3.8rem);
   }
-
-.hero-lede {
+  
+  .hero-lede {
     font-size: 1.1rem;
     max-width: 680px;
     margin-bottom: 24px;
     color: rgba(255, 255, 255, 0.92);
   }
-
-.hero-actions {
+  
+  .hero-actions {
     display: flex;
     flex-wrap: wrap;
     gap: 14px;
   }
-
-.btn {
+  
+  .btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -261,23 +260,23 @@ details.section {
     border: 2px solid transparent;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
   }
-
-.primary-btn {
+  
+  .primary-btn {
     background: linear-gradient(120deg, var(--accent) 0%, var(--accent-2) 100%);
     color: #ffffff;
     box-shadow: 0 14px 30px rgba(0, 0, 0, 0.15);
   }
-
-.ghost-btn {
+  
+  .ghost-btn {
     border-color: rgba(255, 255, 255, 0.65);
     color: #ffffff;
   }
-
-.btn:hover {
+  
+  .btn:hover {
     transform: translateY(-2px);
   }
-
-.hero-stats {
+  
+  .hero-stats {
     position: relative;
     z-index: 1;
     margin-top: 36px;
@@ -285,57 +284,57 @@ details.section {
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 16px;
   }
-
-.hero-stats article {
+  
+  .hero-stats article {
     padding: 1rem 1.2rem;
     border-radius: 20px;
     background: rgba(255, 255, 255, 0.12);
     border: 1px solid rgba(255, 255, 255, 0.2);
   }
-
-.hero-stats p {
+  
+  .hero-stats p {
     margin: 0.2rem 0;
     color: rgba(255, 255, 255, 0.92);
   }
   
-  /* ======================
-     INTRO / HOME
-     ====================== */
+  /* ==============
+     TYPOGRAPHY / INTRO
+     ============== */
   
-.introduction {
+  .introduction {
     margin: 60px auto 32px;
   }
-
-.metric-label {
+  
+  .metric-label {
     font-size: 0.85rem;
     text-transform: uppercase;
     letter-spacing: 0.05em;
     color: #64748b;
     margin: 0 0 8px;
   }
-
-.metric-value {
+  
+  .metric-value {
     font-family: "Roboto Slab", serif;
     font-size: 2rem;
     margin: 0 0 4px;
     color: var(--nav-bg);
   }
-
-.metric-meta {
+  
+  .metric-meta {
     margin: 0;
     font-size: 0.9rem;
     color: var(--muted);
   }
-
-.sections-stack {
+  
+  .sections-stack {
     display: flex;
     flex-direction: column;
     gap: 28px;
     margin: 0 auto 32px;
     width: 100%;
   }
-
-.sections-stack details.section {
+  
+  .sections-stack details.section {
     width: 100%;
     margin: 0;
   }
@@ -383,13 +382,13 @@ details.section {
     margin-bottom: 8px;
   }
   
-  /* ======================
+  /* ==============
      PAGE INDEX (VIS PAGE)
-     ====================== */
+     ============== */
   
-.page-index {
+  .page-index {
     position: sticky;
-    top: 3.1rem; /* just below nav */
+    top: 3.1rem;
     z-index: 20;
     background: rgba(255, 255, 255, 0.95);
     border-bottom: 1px solid rgba(31, 41, 55, 0.08);
@@ -409,7 +408,7 @@ details.section {
     justify-content: center;
   }
   
-.page-index a {
+  .page-index a {
     font-family: "Fira Sans", system-ui, sans-serif;
     text-decoration: none;
     font-size: 0.9rem;
@@ -427,41 +426,42 @@ details.section {
     transform: translateY(-1px);
   }
   
-.page-index a.active-link {
+  .page-index a.active-link {
     background: var(--accent) !important;
     color: #ffffff !important;
     border-color: transparent !important;
   }
   
-  /* ======================
-     VISUALIZATION SECTIONS
-     ====================== */
+  /* ==============
+     LEGACY SECTION-BASED VIS LAYOUT
+     (still supported; uses .chart-container)
+     ============== */
   
-.viz-group {
+  .viz-group {
     background: var(--card-bg);
     border-radius: 32px;
     padding: clamp(1.75rem, 3vw, 2.7rem);
     border: 1px solid rgba(15, 23, 42, 0.05);
     box-shadow: 0 24px 60px rgba(15, 23, 42, 0.08);
   }
-
-.group-header h2 {
+  
+  .group-header h2 {
     margin: 0 0 0.2rem;
   }
-
-.group-header p {
+  
+  .group-header p {
     margin: 0.2rem 0 0;
     color: var(--muted);
   }
-
-.viz-stack {
+  
+  .viz-stack {
     margin-top: 1.5rem;
     display: flex;
     flex-direction: column;
     gap: clamp(20px, 3vw, 34px);
   }
-
-.viz-panel {
+  
+  .viz-panel {
     background: #fffdf8;
     border: 1px solid rgba(28, 30, 33, 0.08);
     border-radius: 26px;
@@ -472,248 +472,78 @@ details.section {
     min-height: 100%;
     box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
   }
-
-.viz-panel .viz-panel-text h3 {
+  
+  .viz-panel .viz-panel-text h3 {
     margin: 0;
     color: var(--accent-3);
   }
-
-.viz-panel .viz-panel-text p {
+  
+  .viz-panel .viz-panel-text p {
     margin: 0;
     color: var(--muted);
   }
-
-.viz-panel .chart-shell {
+  
+  .viz-panel .chart-shell {
     margin-top: 0.5rem;
     background: #ffffff;
     border: 1px solid rgba(15, 23, 42, 0.08);
     border-radius: 22px;
     padding: clamp(1rem, 1.8vw, 2rem);
   }
-
-.chart-container {
-    width: 100%;
-    min-height: 360px;
-    position: relative;
-    overflow: visible;
-  }
-
-.chart-container.large {
-    min-height: 460px;
-  }
-
-.chart-container.tall {
-    min-height: 520px;
-  }
-
-.chart-container.medium {
-    min-height: 400px;
-  }
-
-.chart-container.compact {
-    min-height: 320px;
-  }
-
-.chart-container {
+  
+  /* Legacy chart container – behaves like a canvas */
+  .chart-container {
     margin-top: 10px;
     background-color: #ffffff;
     padding: clamp(1rem, 2vw, 1.6rem);
     border: 1px solid rgba(31, 41, 51, 0.08);
     border-radius: 20px;
-    overflow: hidden;
+    width: 100%;
+    min-height: 360px;
     position: relative;
     display: flex;
     flex-direction: column;
     align-items: center;
-    width: 100%;
+    justify-content: center;
+    overflow: visible; /* allow tooltips to escape */
     box-sizing: border-box;
   }
-
-/* SVG styling */
-.chart-container svg {
-    width: 100%;
-    max-width: 1000px;
-    height: auto;
-    flex-shrink: 0;
-  }
-
-.chart-container > div,
-.chart-container canvas,
-.chart-container svg {
-    align-self: stretch;
-  }
-
-.map-layout {
-    margin-top: 1.5rem;
-    display: grid;
-    gap: 20px;
-    grid-template-columns: minmax(0, 2fr) minmax(280px, 0.9fr);
-    align-items: start;
-  }
-
-.map-sidebar {
-    padding: 1.8rem;
-  }
-
-.map-sidebar h4 {
-    margin-top: 0;
-    color: var(--accent-3);
-  }
-
-.map-sidebar ul {
-    padding-left: 18px;
-    margin: 0;
-    color: var(--muted);
-  }
-
-.map-caption {
-    margin-top: 12px;
-    font-size: 0.9rem;
-    color: #4b5563;
-  }
-
-.map-placeholders {
-    margin-top: 1.5rem;
-    display: grid;
-    gap: 20px;
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  
+  .chart-container.large {
+    min-height: 460px;
   }
   
-  /* SVG styling */
-.chart-container svg {
+  .chart-container.tall {
+    min-height: 520px;
+  }
+  
+  .chart-container.medium {
+    min-height: 400px;
+  }
+  
+  .chart-container.compact {
+    min-height: 320px;
+  }
+  
+  .chart-container svg {
     width: 100%;
     max-width: 960px;
     height: auto;
     flex-shrink: 0;
   }
   
-  /* Tooltip */
-  .chart-container .tooltip {
-    position: absolute;
-    background-color: rgba(0, 0, 0, 0.8);
-    color: white;
-    padding: 8px 12px;
-    border-radius: 4px;
-    font-family: "Fira Sans", sans-serif;
-    font-size: 12px;
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 0.2s;
-  }
+  /* ==============
+     NEW DASHBOARD-STYLE VIS LAYOUT
+     (tabs + chart-canvas)
+     ============== */
   
-  .chart-container .tooltip.visible {
-    opacity: 1;
-  }
-  
-  /* Ridgeline toolbar */
-  .ridge-toolbar,
-  .linechart-toolbar {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    margin-bottom: 8px;
-    font-size: 0.9rem;
-  }
-  
-  .toggle {
-    display: inline-flex;
-    border: 1px solid var(--border);
-    background: #fff;
-    border-radius: 999px;
-    overflow: hidden;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
-  }
-  
-  .toggle button {
-    border: 0;
-    background: transparent;
-    padding: 6px 14px;
-    font-weight: 700;
-    cursor: pointer;
-    font-family: "Fira Sans", system-ui, sans-serif;
-    transition: 0.2s ease;
-  }
-  
-  .toggle button:hover {
-    background: #f3f4f6;
-  }
-  
-  .toggle button.active {
-    background: var(--nav-bg);
-    color: #fff;
-  }
-  
-  /* ======================
-     FOOTER
-     ====================== */
-  
-.footer {
-    background-color: var(--nav-bg);
-    color: white;
-    text-align: center;
-    padding: 30px;
-    margin-top: 60px;
-    width: 100%;
-  }
-
-.footer p {
-    color: white;
-    margin: 5px 0;
-  }
-  
-  /* ======================
-     RESPONSIVE
-     ====================== */
-  
-  @media (max-width: 992px) {
-    .data-card {
-      grid-template-columns: 1fr;
-    }
-
-    .map-layout {
-      grid-template-columns: 1fr;
-    }
-  }
-
-  @media (max-width: 768px) {
-    .topnav {
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 0.5rem;
-      padding-inline: 1.5rem;
-    }
-  
-    .hero {
-      padding: 60px 1.5rem;
-    }
-
-    .hero-actions {
-      width: 100%;
-    }
-
-    .metric-grid {
-      grid-template-columns: 1fr;
-    }
-
-    details.section {
-      padding-inline: 10px;
-    }
-
-    .section-body {
-      padding-inline: 12px;
-    }
-  }
-  /* ===========
-   VIS DASHBOARD LAYOUT
-   =========== */
-
-.visualizations-page {
+  .visualizations-page {
     background:
       radial-gradient(circle at 20% 0%, rgba(255, 243, 224, 0.55), transparent 55%),
       linear-gradient(135deg, var(--bg) 0%, var(--bg-accent) 70%, #ffffff 100%);
   }
   
-  /* Compact hero for dashboard */
+  /* Compact hero variant for dashboard (if used) */
   .viz-hero-compact {
     padding: 56px 7vw 40px;
     background: linear-gradient(120deg, #111827, #b02a37, #d97706);
@@ -754,7 +584,7 @@ details.section {
     color: #ffffff;
   }
   
-  /* Main layout */
+  /* Main layout wrapper for the dashboard */
   .viz-layout {
     width: min(1180px, calc(100% - 3rem));
     margin: 32px auto 90px;
@@ -800,7 +630,7 @@ details.section {
     box-shadow: 0 10px 24px rgba(176, 42, 55, 0.4);
   }
   
-  /* Panels */
+  /* Tab panels */
   .viz-tab-panel {
     display: none;
     background: #ffffff;
@@ -858,12 +688,12 @@ details.section {
     color: var(--muted);
   }
   
-  /* Make some cards span full width */
+  /* Full-width card */
   .chart-span-2 {
     grid-column: 1 / -1;
   }
   
-  /* Chart canvas – single card-level wrapper */
+  /* Chart canvas – single wrapper inside each chart card */
   .chart-canvas {
     margin-top: 0.4rem;
     background-color: #ffffff;
@@ -876,10 +706,10 @@ details.section {
     align-items: center;
     justify-content: center;
     position: relative;
-    overflow: hidden;
+    overflow: visible; /* allow tooltips / external labels */
   }
   
-  /* size variants */
+  /* Size variants */
   .chart-large {
     min-height: 440px;
   }
@@ -893,35 +723,31 @@ details.section {
   }
   
   .chart-map {
-    min-height: 640px; /* bigger map */
+    min-height: 640px;
   }
   
   .chart-compact {
     min-height: 280px;
   }
   
-  /* SVG inside canvases */
+  /* SVG sizing in canvases */
   .chart-canvas svg {
     width: 100%;
     max-width: 1000px;
     height: auto;
   }
   
-  /* Shared tooltip styling */
-  .chart-canvas .tooltip {
-    position: absolute;
-    background: rgba(17, 24, 39, 0.9);
-    color: #f9fafb;
-    padding: 6px 10px;
-    border-radius: 4px;
-    font-size: 12px;
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 0.15s ease;
+  /* Optional external legend under chart */
+  .chart-legend {
+    margin-top: 0.75rem;
+    display: flex;
+    justify-content: center;
   }
   
-  .chart-canvas .tooltip.visible {
-    opacity: 1;
+  .chart-legend svg {
+    width: 100%;
+    max-width: 480px;
+    height: auto;
   }
   
   /* Map caption */
@@ -931,20 +757,67 @@ details.section {
     color: #4b5563;
   }
   
-  /* Footer a bit deeper so it doesn't feel tiny */
+  /* ==============
+     TOOLTIP & INTERACTIVITY
+     ============== */
+  
+  /* Tooltip styling for both legacy and new canvases */
+  .chart-container .tooltip,
+  .chart-canvas .tooltip {
+    position: absolute;
+    background: rgba(17, 24, 39, 0.9);
+    color: #f9fafb;
+    padding: 6px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    pointer-events: none; /* tooltips do not block mouse events */
+    opacity: 0;
+    transition: opacity 0.15s ease;
+  }
+  
+  .chart-container .tooltip.visible,
+  .chart-canvas .tooltip.visible {
+    opacity: 1;
+  }
+  
+  /* Make ALL chart SVGs and their shapes interactive again */
+  .visualizations-page svg,
+  .visualizations-page svg * {
+    pointer-events: auto;
+  }
+  
+  /* ==============
+     FOOTER
+     ============== */
+  
   .footer {
     background-color: var(--nav-bg);
     color: #ffffff;
     text-align: center;
     padding: 40px 20px;
     margin-top: 40px;
+    width: 100%;
   }
   
   .footer p {
+    color: #ffffff;
     margin: 0;
   }
   
-  /* Responsive */
+  /* ==============
+     RESPONSIVE
+     ============== */
+  
+  @media (max-width: 992px) {
+    .data-card {
+      grid-template-columns: 1fr;
+    }
+  
+    .map-layout {
+      grid-template-columns: 1fr;
+    }
+  }
+  
   @media (max-width: 960px) {
     .viz-hero-inner {
       flex-direction: column;
@@ -966,6 +839,35 @@ details.section {
     }
   }
   
+  @media (max-width: 768px) {
+    .topnav {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.5rem;
+      padding-inline: 1.5rem;
+    }
+  
+    .hero {
+      padding: 60px 1.5rem;
+    }
+  
+    .hero-actions {
+      width: 100%;
+    }
+  
+    .metric-grid {
+      grid-template-columns: 1fr;
+    }
+  
+    details.section {
+      padding-inline: 10px;
+    }
+  
+    .section-body {
+      padding-inline: 12px;
+    }
+  }
+  
   @media (max-width: 640px) {
     .viz-layout {
       width: calc(100% - 1.5rem);
@@ -981,15 +883,31 @@ details.section {
       flex-wrap: wrap;
     }
   }
+  .chart-tooltip {
+    position: fixed;
+    padding: 8px 12px;
+    background: rgba(17, 24, 39, 0.92);
+    color: #ffffff;
+    border-radius: 6px;
+    font-size: 13px;
+    font-family: "Fira Sans", sans-serif;
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0;
+    transition: opacity 0.1s ease;
+  }
+
+  body, html {
+    margin: 0;
+    padding: 0;
+  }
   
-
-  /* Make ALL chart SVGs and their shapes interactive again */
-.visualizations-page svg,
-.visualizations-page svg * {
-  pointer-events: auto;
-}
-
-/* Tooltips should not block mouse events */
-.visualizations-page .chart-container .tooltip {
-  pointer-events: none;
-}
+  .site-wrapper,
+  .page-wrapper,
+  .main-content {
+    min-height: auto !important;
+    height: auto !important;
+    padding-bottom: 0 !important;
+    margin-bottom: 0 !important;
+  }
+  
