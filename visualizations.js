@@ -1,3 +1,4 @@
+// Shared colors & helpers
 const colors = {
   primary: "#4a90e2",
   secondary: "#e74c3c",
@@ -29,25 +30,53 @@ const regionGroups = {
   Americas: ["Colombia", "Mexico", "Haiti", "Venezuela"],
 };
 
+const countryAliases = new Map([
+  ["united states of america", "united states"],
+  ["usa", "united states"],
+  ["u.s.a", "united states"],
+  ["u k", "united kingdom"],
+  ["uk", "united kingdom"],
+  ["cote divoire", "cote d'ivoire"],
+  ["ivory coast", "cote d'ivoire"],
+  ["democratic republic of congo", "democratic republic of the congo"],
+  ["dr congo", "democratic republic of the congo"],
+  ["sudan (north)", "sudan"],
+  ["south korea", "republic of korea"],
+  ["north korea", "democratic people's republic of korea"],
+  ["state of palestine", "palestine"],
+  ["occupied palestinian territory", "palestine"],
+  ["myanmar (burma)", "myanmar"],
+  ["swaziland", "eswatini"],
+]);
+
+function canonicalCountryName(name) {
+  if (!name) return "";
+  const normalized = name
+    .toLowerCase()
+    .replace(/&/g, "and")
+    .replace(/\s*\(.*?\)/g, "")
+    .replace(/[^a-z\s']/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return countryAliases.get(normalized) || normalized;
+}
+
 let loadedData = {
   fatalities: null,
   civilianFatalities: null,
   eventsTargetingCivilians: null,
   demonstrationEvents: null,
+  politicalViolenceMonthly: null,
 };
+
+let worldFeatures = null;
 
 function parseNum(d, key) {
   const val = +d[key];
   return isNaN(val) ? 0 : val;
 }
 
-function getRegion(name) {
-  for (const [r, arr] of Object.entries(regionGroups)) {
-    if (arr.some((c) => name.includes(c) || c.includes(name))) return r;
-  }
-  return "Other";
-}
-
+// Load all CSVs
 Promise.all([
   d3.csv(
     "data/number_of_reported_fatalities_by_country-year_as-of-24Oct2025_0.csv",
@@ -90,6 +119,7 @@ Promise.all([
       events: parseNum(d, "EVENTS"),
     })
   ),
+  d3.json("https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json"),
 ])
   .then(
     ([
@@ -98,12 +128,20 @@ Promise.all([
       eventsTargetingCivilians,
       demonstrationEvents,
       politicalViolenceMonthly,
+      worldData,
     ]) => {
       loadedData.fatalities = fatalities;
       loadedData.civilianFatalities = civilianFatalities;
       loadedData.eventsTargetingCivilians = eventsTargetingCivilians;
       loadedData.demonstrationEvents = demonstrationEvents;
       loadedData.politicalViolenceMonthly = politicalViolenceMonthly;
+      if (worldData && window.topojson) {
+        worldFeatures = window.topojson.feature(
+          worldData,
+          worldData.objects.countries
+        ).features;
+      }
+
       createBarChart();
       createGroupedBarChart();
       createHeatmap();
@@ -117,6 +155,7 @@ Promise.all([
       createRegionalLineChart();
       createEventTrendAreaChart();
       createMonthlyEventLines();
+      createChoropleth();
     }
   )
   .catch(() => {
@@ -125,9 +164,11 @@ Promise.all([
       .style("padding", "20px")
       .style("color", "red")
       .html(
-        "(1) Error loading data files. Please ensure all CSV files are available in the data folder."
+        "Error loading data files. Please ensure all CSV files are available in the data folder."
       );
   });
+
+/* ---------- CHARTS ---------- */
 
 function createBarChart() {
   if (!loadedData.fatalities) return;
@@ -141,8 +182,8 @@ function createBarChart() {
 
   const svg = container
     .append("svg")
-    .attr("width", width + margin.left + margin.right)
-    .attr("height", height + margin.top + margin.bottom);
+    .attr("viewBox", `0 0 ${width + margin.left + margin.right} ${height + margin.top + margin.bottom}`)
+    .attr("preserveAspectRatio", "xMidYMid meet");
 
   const g = svg
     .append("g")
@@ -179,11 +220,11 @@ function createBarChart() {
     .data(data)
     .enter()
     .append("rect")
+    .attr("class", "bar")
     .attr("x", (d) => xScale(d.country))
     .attr("y", (d) => yScale(d.fatalities))
     .attr("width", xScale.bandwidth())
     .attr("height", (d) => height - yScale(d.fatalities))
-    .attr("fill", colors.primary)
     .on("mouseover", function (event, d) {
       tooltip
         .classed("visible", true)
@@ -230,8 +271,8 @@ function createGroupedBarChart() {
 
   const svg = container
     .append("svg")
-    .attr("width", width + margin.left + margin.right)
-    .attr("height", height + margin.top + margin.bottom);
+    .attr("viewBox", `0 0 ${width + margin.left + margin.right} ${height + margin.top + margin.bottom}`)
+    .attr("preserveAspectRatio", "xMidYMid meet");
 
   const g = svg
     .append("g")
@@ -298,7 +339,9 @@ function createGroupedBarChart() {
     .attr("y", (d) => yScale(d.value))
     .attr("width", xSubgroup.bandwidth())
     .attr("height", (d) => height - yScale(d.value))
-    .attr("fill", (d) => (d.key === "civilian" ? colors.secondary : colors.tertiary))
+    .attr("fill", (d) =>
+      d.key === "civilian" ? colors.secondary : colors.tertiary
+    )
     .on("mouseover", function (event, d) {
       tooltip
         .classed("visible", true)
@@ -310,7 +353,9 @@ function createGroupedBarChart() {
       tooltip.classed("visible", false);
     });
 
-  g.append("g").attr("transform", `translate(0,${height})`).call(d3.axisBottom(xScale));
+  g.append("g")
+    .attr("transform", `translate(0,${height})`)
+    .call(d3.axisBottom(xScale));
   g.append("g").call(d3.axisLeft(yScale).tickFormat(d3.format(".2s")));
 
   g.append("text")
@@ -330,11 +375,16 @@ function createGroupedBarChart() {
 
   subgroups.forEach((subgroup, i) => {
     const row = legend.append("g").attr("transform", `translate(0, ${i * 20})`);
-    row.append("rect")
+    row
+      .append("rect")
       .attr("width", 15)
       .attr("height", 15)
       .attr("fill", subgroup === "civilian" ? colors.secondary : colors.tertiary);
-    row.append("text").attr("x", 20).attr("y", 12).text(subgroup.charAt(0).toUpperCase() + subgroup.slice(1));
+    row
+      .append("text")
+      .attr("x", 20)
+      .attr("y", 12)
+      .text(subgroup.charAt(0).toUpperCase() + subgroup.slice(1));
   });
 }
 
@@ -350,17 +400,24 @@ function createHeatmap() {
 
   const svg = container
     .append("svg")
-    .attr("width", width + margin.left + margin.right)
-    .attr("height", height + margin.top + margin.bottom);
+    .attr("viewBox", `0 0 ${width + margin.left + margin.right} ${height + margin.top + margin.bottom}`)
+    .attr("preserveAspectRatio", "xMidYMid meet");
 
-  const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+  const g = svg
+    .append("g")
+    .attr("transform", `translate(${margin.left},${margin.top})`);
 
   const regionYearData = {};
   Object.keys(regionGroups).forEach((region) => {
     regionYearData[region] = {};
     loadedData.eventsTargetingCivilians.forEach((d) => {
-      if (regionGroups[region].some((c) => d.country.includes(c) || c.includes(d.country))) {
-        regionYearData[region][d.year] = (regionYearData[region][d.year] || 0) + d.events;
+      if (
+        regionGroups[region].some(
+          (c) => d.country.includes(c) || c.includes(d.country)
+        )
+      ) {
+        regionYearData[region][d.year] =
+          (regionYearData[region][d.year] || 0) + d.events;
       }
     });
   });
@@ -368,11 +425,21 @@ function createHeatmap() {
   const years = [2018, 2019, 2020, 2021, 2022, 2023, 2024];
   const regions = Object.keys(regionGroups);
 
-  const maxValue = d3.max(regions, (region) => d3.max(years, (year) => regionYearData[region][year] || 0));
+  const maxValue = d3.max(regions, (region) =>
+    d3.max(years, (year) => regionYearData[region][year] || 0)
+  );
   const colorScale = colors.heatmap.domain([0, maxValue]);
 
-  const xScale = d3.scaleBand().domain(years.map(String)).range([0, width]).padding(0.05);
-  const yScale = d3.scaleBand().domain(regions).range([0, height]).padding(0.05);
+  const xScale = d3
+    .scaleBand()
+    .domain(years.map(String))
+    .range([0, width])
+    .padding(0.05);
+  const yScale = d3
+    .scaleBand()
+    .domain(regions)
+    .range([0, height])
+    .padding(0.05);
 
   const tooltip = container.append("div").attr("class", "tooltip");
 
@@ -386,41 +453,45 @@ function createHeatmap() {
         .attr("y", yScale(region))
         .attr("width", xScale.bandwidth())
         .attr("height", yScale.bandwidth())
+        .attr("class", "heatmap-cell")
         .on("mouseover", function (event) {
           tooltip
             .classed("visible", true)
             .style("left", event.pageX + 10 + "px")
             .style("top", event.pageY - 10 + "px")
-            .html(`${region}<br>${year}: ${value.toLocaleString()} events`);
+            .html(
+              `${region}<br>${year}: ${value.toLocaleString()} events`
+            );
         })
         .on("mouseout", function () {
           tooltip.classed("visible", false);
         });
 
       cell.style("fill", colorScale(value));
-
-      if (value > 0) {
-        g.append("text")
-          .attr("x", xScale(String(year)) + xScale.bandwidth() / 2)
-          .attr("y", yScale(region) + yScale.bandwidth() / 2)
-          .attr("text-anchor", "middle")
-          .attr("dominant-baseline", "middle")
-          .attr("fill", value > maxValue / 2 ? "white" : "black")
-          .attr("font-size", "11px")
-          .text(value > 1000 ? d3.format(".1s")(value) : value);
-      }
     });
   });
 
-  g.append("g").attr("transform", `translate(0,${height})`).call(d3.axisBottom(xScale));
+  g.append("g")
+    .attr("transform", `translate(0,${height})`)
+    .call(d3.axisBottom(xScale));
   g.append("g").call(d3.axisLeft(yScale));
 
-  g.append("text").attr("x", width / 2).attr("y", height + 40).attr("text-anchor", "middle").text("Year");
-  g.append("text").attr("transform", "rotate(-90)").attr("y", -70).attr("x", -height / 2).attr("text-anchor", "middle").text("Region");
+  g.append("text")
+    .attr("x", width / 2)
+    .attr("y", height + 40)
+    .attr("text-anchor", "middle")
+    .text("Year");
+  g.append("text")
+    .attr("transform", "rotate(-90)")
+    .attr("y", -70)
+    .attr("x", -height / 2)
+    .attr("text-anchor", "middle")
+    .text("Region");
 }
 
 function createStackedBarChart() {
-  if (!loadedData.eventsTargetingCivilians || !loadedData.demonstrationEvents) return;
+  if (!loadedData.eventsTargetingCivilians || !loadedData.demonstrationEvents)
+    return;
 
   const container = d3.select("#stacked-bar-chart");
   const margin = { top: 40, right: 180, bottom: 60, left: 80 };
@@ -431,10 +502,12 @@ function createStackedBarChart() {
 
   const svg = container
     .append("svg")
-    .attr("width", width + margin.left + margin.right)
-    .attr("height", height + margin.top + margin.bottom);
+    .attr("viewBox", `0 0 ${width + margin.left + margin.right} ${height + margin.top + margin.bottom}`)
+    .attr("preserveAspectRatio", "xMidYMid meet");
 
-  const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+  const g = svg
+    .append("g")
+    .attr("transform", `translate(${margin.left},${margin.top})`);
 
   const regionData = [];
   Object.keys(regionGroups).forEach((region) => {
@@ -486,7 +559,11 @@ function createStackedBarChart() {
     return p;
   });
 
-  const xScale = d3.scaleBand().domain(regionData.map((d) => d.region)).range([0, width]).padding(0.2);
+  const xScale = d3
+    .scaleBand()
+    .domain(regionData.map((d) => d.region))
+    .range([0, width])
+    .padding(0.2);
   const yScale = d3.scaleLinear().domain([0, 100]).range([height, 0]);
 
   const tooltip = container.append("div").attr("class", "tooltip");
@@ -509,7 +586,11 @@ function createStackedBarChart() {
     .attr("height", (d) => yScale(d[0]) - yScale(d[1]))
     .attr("width", xScale.bandwidth())
     .attr("fill", (d) =>
-      d.key === "targeting" ? colors.secondary : d.key === "demonstrations" ? colors.quinary : colors.quaternary
+      d.key === "targeting"
+        ? colors.secondary
+        : d.key === "demonstrations"
+        ? colors.quinary
+        : colors.quaternary
     )
     .on("mouseover", function (event, d) {
       const value = (d[1] - d[0]).toFixed(1);
@@ -523,39 +604,89 @@ function createStackedBarChart() {
       tooltip.classed("visible", false);
     });
 
-  g.append("g").attr("transform", `translate(0,${height})`).call(d3.axisBottom(xScale)).selectAll("text")
+  g.append("g")
+    .attr("transform", `translate(0,${height})`)
+    .call(d3.axisBottom(xScale))
+    .selectAll("text")
     .attr("transform", "rotate(-15)")
     .style("text-anchor", "end");
 
   g.append("g").call(d3.axisLeft(yScale).tickFormat((d) => d + "%"));
 
-  g.append("text").attr("transform", "rotate(-90)").attr("y", -50).attr("x", -height / 2).attr("text-anchor", "middle").text("Percentage");
-  g.append("text").attr("x", width / 2).attr("y", height + 50).attr("text-anchor", "middle").text("Region");
+  g.append("text")
+    .attr("transform", "rotate(-90)")
+    .attr("y", -50)
+    .attr("x", -height / 2)
+    .attr("text-anchor", "middle")
+    .text("Percentage");
+  g.append("text")
+    .attr("x", width / 2)
+    .attr("y", height + 50)
+    .attr("text-anchor", "middle")
+    .text("Region");
 
   const legend = g.append("g").attr("transform", `translate(${width + 20}, 20)`);
   keys.forEach((key, i) => {
     const row = legend.append("g").attr("transform", `translate(0, ${i * 20})`);
-    row.append("rect")
+    row
+      .append("rect")
       .attr("width", 15)
       .attr("height", 15)
-      .attr("fill", key === "targeting" ? colors.secondary : key === "demonstrations" ? colors.quinary : colors.quaternary);
+      .attr(
+        "fill",
+        key === "targeting"
+          ? colors.secondary
+          : key === "demonstrations"
+          ? colors.quinary
+          : colors.quaternary
+      );
     row.append("text").attr("x", 20).attr("y", 12).text(keyLabels[key]);
   });
 }
 
 function createWaffleChart() {
-  if (!loadedData.eventsTargetingCivilians || !loadedData.demonstrationEvents) return;
+  if (!loadedData.eventsTargetingCivilians || !loadedData.demonstrationEvents)
+    return;
 
   const totalEvents = [
-    { type: "Events targeting civilians", value: d3.sum(loadedData.eventsTargetingCivilians, (d) => d.events) },
-    { type: "Demonstration events", value: d3.sum(loadedData.demonstrationEvents, (d) => d.events) },
+    {
+      type: "Events targeting civilians",
+      value: d3.sum(loadedData.eventsTargetingCivilians, (d) => d.events),
+    },
+    {
+      type: "Demonstration events",
+      value: d3.sum(loadedData.demonstrationEvents, (d) => d.events),
+    },
   ];
 
   const total = d3.sum(totalEvents, (d) => d.value);
   const numSquares = 100;
-  const squareSize = 20;
   const cols = 10;
   const rows = numSquares / cols;
+
+  const container = d3.select("#waffle-chart");
+  container.html("");
+
+  const cardWidth = container.node().clientWidth || 400;
+  const cardHeight = container.node().clientHeight || 300;
+
+  const sqSize = Math.min(
+    Math.floor((cardWidth - 80) / cols),
+    Math.floor((cardHeight - 80) / rows)
+  );
+
+  const width = cols * sqSize;
+  const height = rows * sqSize;
+
+  const svg = container
+    .append("svg")
+    .attr("viewBox", `0 0 ${cardWidth} ${cardHeight}`)
+    .attr("preserveAspectRatio", "xMidYMid meet");
+
+  const g = svg.append("g").attr(
+    "transform",
+    `translate(${(cardWidth - width) / 2}, ${(cardHeight - height) / 2})`
+  );
 
   const waffleData = [];
   totalEvents.forEach((d) => {
@@ -563,25 +694,20 @@ function createWaffleChart() {
     for (let i = 0; i < d.units; i++) waffleData.push({ type: d.type });
   });
 
-  const width = cols * squareSize;
-  const height = rows * squareSize;
+  const color = d3
+    .scaleOrdinal()
+    .domain(totalEvents.map((d) => d.type))
+    .range(["#d1495b", "#edae49"]);
 
-  const container = d3.select("#waffle-chart");
-  container.html("");
-
-  const svg = container.append("svg").attr("width", width).attr("height", height).style("font-family", "sans-serif");
-
-  const color = d3.scaleOrdinal().domain(totalEvents.map((d) => d.type)).range(["#d1495b", "#edae49"]);
-
-  svg
-    .selectAll("rect")
+  g.selectAll("rect")
     .data(waffleData)
     .enter()
     .append("rect")
-    .attr("x", (_, i) => (i % cols) * squareSize)
-    .attr("y", (_, i) => Math.floor(i / cols) * squareSize)
-    .attr("width", squareSize - 2)
-    .attr("height", squareSize - 2)
+    .attr("x", (_, i) => (i % cols) * sqSize)
+    .attr("y", (_, i) => Math.floor(i / cols) * sqSize)
+    .attr("width", sqSize - 2)
+    .attr("height", sqSize - 2)
+    .attr("class", "waffle-cell")
     .attr("fill", (d) => color(d.type));
 
   const legend = container.append("div").style("margin-top", "10px");
@@ -596,7 +722,9 @@ function createWaffleChart() {
     .style("margin-bottom", "5px")
     .html(
       (d) =>
-        `<div style="width:15px; height:15px; background:${color(d.type)}; margin-right:8px;"></div> ${d.type} (${d3.format(",")(d.value)})`
+        `<div style="width:15px; height:15px; background:${color(
+          d.type
+        )}; margin-right:8px;"></div> ${d.type} (${d3.format(",")(d.value)})`
     );
 }
 
@@ -612,12 +740,16 @@ function createHistogram() {
 
   const svg = container
     .append("svg")
-    .attr("width", width + margin.left + margin.right)
-    .attr("height", height + margin.top + margin.bottom);
+    .attr("viewBox", `0 0 ${width + margin.left + margin.right} ${height + margin.top + margin.bottom}`)
+    .attr("preserveAspectRatio", "xMidYMid meet");
 
-  const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+  const g = svg
+    .append("g")
+    .attr("transform", `translate(${margin.left},${margin.top})`);
 
-  const raw = loadedData.fatalities.map((d) => d.fatalities).filter((v) => v > 0);
+  const raw = loadedData.fatalities
+    .map((d) => d.fatalities)
+    .filter((v) => v > 0);
   if (!raw.length) return;
 
   const max = d3.max(raw);
@@ -629,9 +761,17 @@ function createHistogram() {
   const logMin = 0;
   const logMax = Math.log10(max);
   const thresholds = d3.range(logMin, logMax, (logMax - logMin) / 30);
-  const bins = d3.bin().domain([logMin, logMax]).thresholds(thresholds).value((v) => Math.log10(v))(raw);
+  const bins = d3
+    .bin()
+    .domain([logMin, logMax])
+    .thresholds(thresholds)
+    .value((v) => Math.log10(v))(raw);
 
-  const y = d3.scaleLinear().domain([0, d3.max(bins, (d) => d.length) || 1]).nice().range([height, 0]);
+  const y = d3
+    .scaleLinear()
+    .domain([0, d3.max(bins, (d) => d.length) || 1])
+    .nice()
+    .range([height, 0]);
 
   const tooltip = container.append("div").attr("class", "tooltip");
 
@@ -641,7 +781,9 @@ function createHistogram() {
     .append("rect")
     .attr("x", (d) => x(Math.pow(10, d.x0)) + 1)
     .attr("y", (d) => y(d.length))
-    .attr("width", (d) => Math.max(0, x(Math.pow(10, d.x1)) - x(Math.pow(10, d.x0)) - 1))
+    .attr("width", (d) =>
+      Math.max(0, x(Math.pow(10, d.x1)) - x(Math.pow(10, d.x0)) - 1)
+    )
     .attr("height", (d) => height - y(d.length))
     .attr("fill", colors.primary)
     .on("mousemove", (event, d) => {
@@ -655,11 +797,22 @@ function createHistogram() {
     })
     .on("mouseout", () => tooltip.classed("visible", false));
 
-  g.append("g").attr("transform", `translate(0,${height})`).call(d3.axisBottom(x).ticks(6, "~s"));
+  g.append("g")
+    .attr("transform", `translate(0,${height})`)
+    .call(d3.axisBottom(x).ticks(6, "~s"));
   g.append("g").call(d3.axisLeft(y));
 
-  g.append("text").attr("transform", "rotate(-90)").attr("x", -height / 2).attr("y", -50).attr("text-anchor", "middle").text("Count");
-  g.append("text").attr("x", width / 2).attr("y", height + 40).attr("text-anchor", "middle").text("Yearly Fatalities");
+  g.append("text")
+    .attr("transform", "rotate(-90)")
+    .attr("x", -height / 2)
+    .attr("y", -50)
+    .attr("text-anchor", "middle")
+    .text("Count");
+  g.append("text")
+    .attr("x", width / 2)
+    .attr("y", height + 40)
+    .attr("text-anchor", "middle")
+    .text("Yearly Fatalities");
 }
 
 function createRidgelinePlot() {
@@ -669,282 +822,175 @@ function createRidgelinePlot() {
   container.html("");
 
   const toolbar = container.append("div").attr("class", "ridge-toolbar");
-  toolbar.append("label").style("font-weight","700").text("Region:");
+  toolbar.append("label").style("font-weight", "700").text("Region:");
   const toggle = toolbar.append("div").attr("class", "toggle");
-  const REGIONS = ["Africa","Middle East & Asia"];
-  const btns = toggle.selectAll("button")
+  const REGIONS = ["Africa", "Middle East & Asia"];
+  const btns = toggle
+    .selectAll("button")
     .data(REGIONS)
     .enter()
     .append("button")
-    .attr("type","button")
-    .attr("class",(d,i)=> i===0 ? "active" : null)
-    .text(d=>d);
+    .attr("type", "button")
+    .attr("class", (d, i) => (i === 0 ? "active" : null))
+    .text((d) => d);
 
-  const allYears = Array.from(new Set(loadedData.fatalities.map(d=>+d.year)))
-    .filter(y => y >= 2018 && y <= 2025)
-    .sort((a,b)=>a-b);
+  const allYears = Array.from(new Set(loadedData.fatalities.map((d) => +d.year)))
+    .filter((y) => y >= 2018 && y <= 2025)
+    .sort((a, b) => a - b);
 
   const margin = { top: 10, right: 24, bottom: 44, left: 100 };
-  const bandH  = 36;
+  const bandH = 36;
   const innerH = bandH * allYears.length + 10;
 
   const outerW = container.node().clientWidth || 960;
-  const width  = Math.max(640, Math.min(960, outerW)) - margin.left - margin.right;
+  const width =
+    Math.max(640, Math.min(960, outerW)) - margin.left - margin.right;
   const height = innerH;
 
-  const svg = container.append("svg")
-    .attr("viewBox", `0 0 ${width + margin.left + margin.right} ${height + margin.top + margin.bottom}`)
-    .attr("preserveAspectRatio","xMidYMid meet");
-  const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+  const svg = container
+    .append("svg")
+    .attr(
+      "viewBox",
+      `0 0 ${width + margin.left + margin.right} ${
+        height + margin.top + margin.bottom
+      }`
+    )
+    .attr("preserveAspectRatio", "xMidYMid meet");
+  const g = svg
+    .append("g")
+    .attr("transform", `translate(${margin.left},${margin.top})`);
 
-  const rowsLayer = g.append("g").attr("class","rows-layer");
-  const xAxisG = g.append("g").attr("class","axis axis-x").attr("transform", `translate(0,${height})`);
-  const yAxisG = g.append("g").attr("class","axis axis-y");
-  g.append("text").attr("class","axis-label")
-    .attr("x", width/2).attr("y", height+36).attr("text-anchor","middle")
+  const rowsLayer = g.append("g").attr("class", "rows-layer");
+  const xAxisG = g
+    .append("g")
+    .attr("class", "axis axis-x")
+    .attr("transform", `translate(0,${height})`);
+  const yAxisG = g.append("g").attr("class", "axis axis-y");
+  g.append("text")
+    .attr("class", "axis-label")
+    .attr("x", width / 2)
+    .attr("y", height + 36)
+    .attr("text-anchor", "middle")
     .text("Number of Fatalities");
 
-  const yBand = d3.scaleBand().domain(allYears.map(String)).range([0, height]).paddingInner(0.55);
+  const yBand = d3
+    .scaleBand()
+    .domain(allYears.map(String))
+    .range([0, height])
+    .paddingInner(0.55);
 
   yAxisG.call(d3.axisLeft(yBand).tickSizeOuter(0));
 
-  const kernelEpanechnikov = k => v => Math.abs(v) <= 1 ? 0.75*(1 - v*v)/k : 0;
-  const kde = (valuesLog, gridLog, bw=0.22) => {
+  const kernelEpanechnikov = (k) => (v) =>
+    Math.abs(v) <= 1 ? (0.75 * (1 - v * v)) / k : 0;
+  const kde = (valuesLog, gridLog, bw = 0.22) => {
     const K = kernelEpanechnikov(bw);
-    return gridLog.map(t => [Math.pow(10,t), d3.mean(valuesLog, v => K((v - t)/bw)) || 0]);
+    return gridLog.map((t) => [
+      Math.pow(10, t),
+      d3.mean(valuesLog, (v) => K((v - t) / bw)) || 0,
+    ]);
   };
 
   function draw(region) {
-    const inRegion = loadedData.fatalities.filter(d =>
-      regionGroups[region].some(c => d.country.includes(c) || c.includes(d.country))
+    const inRegion = loadedData.fatalities.filter((d) =>
+      regionGroups[region].some(
+        (c) => d.country.includes(c) || c.includes(d.country)
+      )
     );
 
-    const maxX = d3.max(inRegion, d => d.fatalities) || 1;
-    const x = d3.scaleLog().domain([1, Math.max(10, maxX)]).range([0, width]).nice();
+    const maxX = d3.max(inRegion, (d) => d.fatalities) || 1;
+    const x = d3
+      .scaleLog()
+      .domain([1, Math.max(10, maxX)])
+      .range([0, width])
+      .nice();
 
     xAxisG.call(
-      d3.axisBottom(x)
-        .tickValues([1,10,100,1000,10000,100000,1000000].filter(v => v <= x.domain()[1]))
+      d3
+        .axisBottom(x)
+        .tickValues(
+          [1, 10, 100, 1000, 10000, 100000, 1000000].filter(
+            (v) => v <= x.domain()[1]
+          )
+        )
         .tickFormat(d3.format(".0s"))
     );
-    xAxisG.raise(); yAxisG.raise();
+    xAxisG.raise();
+    yAxisG.raise();
 
-    const lgMin = Math.log10(x.domain()[0]), lgMax = Math.log10(x.domain()[1]);
+    const lgMin = Math.log10(x.domain()[0]),
+      lgMax = Math.log10(x.domain()[1]);
     const gridLog = d3.ticks(lgMin, lgMax, 180);
 
-    const perYear = allYears.map(yr => {
-      const vals = inRegion.filter(d => d.year === yr)
-        .map(d => Math.max(1, +d.fatalities));
-      const logs = vals.map(v => Math.log10(v));
-      const dens = logs.length ? kde(logs, gridLog) : gridLog.map(t => [Math.pow(10,t), 0]);
+    const perYear = allYears.map((yr) => {
+      const vals = inRegion
+        .filter((d) => d.year === yr)
+        .map((d) => Math.max(1, +d.fatalities));
+      const logs = vals.map((v) => Math.log10(v));
+      const dens = logs.length
+        ? kde(logs, gridLog)
+        : gridLog.map((t) => [Math.pow(10, t), 0]);
       return { year: String(yr), density: dens, n: vals.length };
     });
 
-    const peak = d3.max(perYear, y => d3.max(y.density, d => d[1])) || 1e-6;
+    const peak =
+      d3.max(perYear, (y) => d3.max(y.density, (d) => d[1])) || 1e-6;
 
-    const rows = rowsLayer.selectAll(".ridge-row").data(perYear, d => d.year);
+    const rows = rowsLayer.selectAll(".ridge-row").data(perYear, (d) => d.year);
     rows.exit().remove();
 
-    const enter = rows.enter().append("g").attr("class","ridge-row");
-    enter.append("rect")
-      .attr("x",0).attr("height", yBand.bandwidth())
-      .attr("rx",6).attr("ry",6)
-      .attr("fill","rgba(0,0,0,0.03)").attr("stroke","none");
-    enter.append("path")
-      .attr("class","ridgeline")
-      .attr("stroke","#222").attr("stroke-width",0.6).attr("opacity",0.95);
+    const enter = rows.enter().append("g").attr("class", "ridge-row");
+    enter
+      .append("rect")
+      .attr("x", 0)
+      .attr("height", yBand.bandwidth())
+      .attr("rx", 6)
+      .attr("ry", 6)
+      .attr("fill", "rgba(0,0,0,0.03)")
+      .attr("stroke", "none");
+    enter
+      .append("path")
+      .attr("class", "ridgeline")
+      .attr("stroke", "#222")
+      .attr("stroke-width", 0.6)
+      .attr("opacity", 0.95);
 
-    const merged = enter.merge(rows).attr("transform", d => `translate(0, ${yBand(d.year)})`);
+    const merged = enter.merge(rows).attr(
+      "transform",
+      (d) => `translate(0, ${yBand(d.year)})`
+    );
     merged.select("rect").attr("width", width);
 
-    merged.select("path.ridgeline")
-      .each(function(d){
-        const half = Math.min(yBand.bandwidth() * 0.42, 24);   
-        const scaleY = half / peak;
-        const area = d3.area()
-          .curve(d3.curveCatmullRom.alpha(0.6))
-          .x(p => x(p[0]))
-          .y0(half)
-          .y1(p => half - p[1] * scaleY);
-        d3.select(this)
-          .attr("fill", d3.interpolateWarm((+d.year - allYears[0]) / (allYears[allYears.length-1] - allYears[0] || 1)))
-          .attr("d", area(d.density));
-      });
+    merged.select("path.ridgeline").each(function (d) {
+      const half = Math.min(yBand.bandwidth() * 0.42, 24);
+      const scaleY = half / peak;
+      const area = d3
+        .area()
+        .curve(d3.curveCatmullRom.alpha(0.6))
+        .x((p) => x(p[0]))
+        .y0(half)
+        .y1((p) => half - p[1] * scaleY);
+      d3.select(this)
+        .attr(
+          "fill",
+          d3.interpolateWarm(
+            (+d.year - allYears[0]) /
+              (allYears[allYears.length - 1] - allYears[0] || 1)
+          )
+        )
+        .attr("d", area(d.density));
+    });
 
-    xAxisG.raise(); yAxisG.raise();  
+    xAxisG.raise();
+    yAxisG.raise();
   }
 
   draw(REGIONS[0]);
-  btns.on("click", function(_, region){
-    btns.classed("active", d => d === region);
+  btns.on("click", function (_, region) {
+    btns.classed("active", (d) => d === region);
     draw(region);
   });
 }
-
-function createRegionalLineChart() {
-  if (!loadedData.fatalities) return;
-
-  const container = d3.select("#linear-chart");
-  container.html("");
-
-  // Regions we want to plot
-  const REGIONS = ["Africa", "Middle East & Asia"];
-
-  // --- 1) Build region toggle UI -----------------------------------
-  const toolbar = container.append("div").attr("class", "linechart-toolbar");
-  toolbar.append("label").style("font-weight","700").text("Regions:");
-
-  const info = toolbar.append("div")
-    .style("font-size","13px")
-    .style("color","#444")
-    .style("margin-bottom","6px")
-    .text("Hover a line to highlight it");
-
-  // --- 2) Prepare data ---------------------------------------------
-  const allYears = Array.from(new Set(loadedData.fatalities.map(d=>+d.year)))
-    .filter(y => y >= 2018 && y <= 2025)
-    .sort((a,b)=>a-b);
-
-  // Aggregate fatalities by region + year
-  const regionYear = {};
-  REGIONS.forEach(r => regionYear[r] = allYears.map(y => ({year:y, fatalities:0})));
-
-  loadedData.fatalities.forEach(d => {
-    REGIONS.forEach(region => {
-      if (regionGroups[region].some(c => d.country.includes(c) || c.includes(d.country))) {
-        const yr = +d.year;
-        if (yr >= 2018 && yr <= 2025) {
-          const bucket = regionYear[region].find(e => e.year === yr);
-          bucket.fatalities += +d.fatalities;
-        }
-      }
-    });
-  });
-
-  // Convert into an array for plotting
-  const linesData = REGIONS.map(region => ({
-    region,
-    values: regionYear[region]
-  }));
-
-  // --- 3) Layout ----------------------------------------------------
-  const outerW = container.node().clientWidth || 960;
-  const margin = {top: 30, right: 20, bottom: 40, left: 60};
-  const width  = Math.max(640, Math.min(960, outerW)) - margin.left - margin.right;
-  const height = 420 - margin.top - margin.bottom;
-
-  const svg = container.append("svg")
-    .attr("viewBox", `0 0 ${width + margin.left + margin.right} ${height + margin.top + margin.bottom}`)
-    .attr("preserveAspectRatio","xMidYMid meet");
-
-  const g = svg.append("g")
-    .attr("transform", `translate(${margin.left},${margin.top})`);
-
-  // --- 4) Scales ----------------------------------------------------
-  const x = d3.scaleLinear()
-    .domain(d3.extent(allYears))
-    .range([0, width]);
-
-  const y = d3.scaleLog()
-    .domain([
-      1,
-      d3.max(linesData, r => d3.max(r.values, v => v.fatalities)) || 10
-    ])
-    .range([height, 0])
-    .nice();
-
-  // --- 5) Axes ------------------------------------------------------
-  g.append("g")
-    .attr("transform", `translate(0,${height})`)
-    .call(d3.axisBottom(x).ticks(allYears.length).tickFormat(d3.format("d")));
-
-  g.append("g")
-    .call(
-      d3.axisLeft(y)
-        .tickValues([1,10,100,1000,10000,100000,1000000])
-        .tickFormat(d3.format(".0s"))
-    );
-
-  g.append("text")
-    .attr("x", width/2)
-    .attr("y", height+32)
-    .attr("text-anchor","middle")
-    .text("Year");
-
-  g.append("text")
-    .attr("x", -height/2)
-    .attr("y", -40)
-    .attr("text-anchor","middle")
-    .attr("transform","rotate(-90)")
-    .text("Fatalities");
-
-  // --- 6) Line generator --------------------------------------------
-  const lineGen = d3.line()
-    .x(d => x(d.year))
-    .y(d => y(Math.max(1, d.fatalities)))
-    .curve(d3.curveMonotoneX);
-
-  // --- 7) Draw lines -------------------------------------------------
-  const color = d3.scaleOrdinal()
-    .domain(REGIONS)
-    .range(["#b2182b","#2166ac"]);
-
-  const lines = g.selectAll(".region-line")
-    .data(linesData)
-    .enter()
-    .append("path")
-    .attr("class","region-line")
-    .attr("fill","none")
-    .attr("stroke", d => color(d.region))
-    .attr("stroke-width", 2)
-    .attr("opacity", 0.85)
-    .attr("d", d => lineGen(d.values));
-
-  // --- 8) Add hover highlighting -----------------------------------
-  lines
-    .style("cursor","pointer")
-    .on("mouseover", function(_, d) {
-      lines.transition().duration(120)
-        .attr("stroke-width", 1)
-        .attr("opacity", 0.25);
-
-      d3.select(this)
-        .transition().duration(120)
-        .attr("stroke-width", 4)
-        .attr("opacity", 1);
-
-      info.text(`Region: ${d.region}`);
-    })
-    .on("mouseout", function() {
-      lines.transition().duration(200)
-        .attr("stroke-width", 2)
-        .attr("opacity", 0.85);
-
-      info.text("Hover a line to highlight it");
-    });
-
-  // --- 9) Add legend ------------------------------------------------
-  const legend = g.append("g")
-    .attr("transform","translate(0,-20)");
-
-  legend.selectAll("g")
-    .data(REGIONS)
-    .enter()
-    .append("g")
-    .attr("transform",(d,i)=>`translate(${i*150},0)`)
-    .each(function(region) {
-      const gLegend = d3.select(this);
-      gLegend.append("rect")
-        .attr("width", 16)
-        .attr("height", 16)
-        .attr("fill", color(region));
-      gLegend.append("text")
-        .attr("x", 22)
-        .attr("y", 12)
-        .text(region);
-    });
-}
-
 
 function createBoxPlot() {
   if (!loadedData.fatalities) return;
@@ -958,23 +1004,37 @@ function createBoxPlot() {
 
   const svg = container
     .append("svg")
-    .attr("width", width + margin.left + margin.right)
-    .attr("height", height + margin.top + margin.bottom);
+    .attr("viewBox", `0 0 ${width + margin.left + margin.right} ${height + margin.top + margin.bottom}`)
+    .attr("preserveAspectRatio", "xMidYMid meet");
 
-  const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+  const g = svg
+    .append("g")
+    .attr("transform", `translate(${margin.left},${margin.top})`);
 
   const dataByYear = d3.group(loadedData.fatalities, (d) => d.year);
-  const years = [...dataByYear.keys()].filter((y) => y >= 2018 && y <= 2024).sort((a, b) => a - b);
+  const years = [...dataByYear.keys()]
+    .filter((y) => y >= 2018 && y <= 2024)
+    .sort((a, b) => a - b);
 
-  const allVals = [...loadedData.fatalities.map((d) => d.fatalities)].filter((v) => v > 0);
+  const allVals = [...loadedData.fatalities.map((d) => d.fatalities)].filter(
+    (v) => v > 0
+  );
   if (!allVals.length) return;
 
-  const y = d3.scaleLog().domain([1, d3.max(allVals)]).range([height, 0]).nice();
+  const y = d3
+    .scaleLog()
+    .domain([1, d3.max(allVals)])
+    .range([height, 0])
+    .nice();
   const x = d3.scaleBand().domain(years).range([0, width]).padding(0.4);
   const boxWidth = Math.min(40, x.bandwidth());
 
   years.forEach((year) => {
-    const vals = dataByYear.get(year).map((d) => d.fatalities).filter((v) => v > 0).sort(d3.ascending);
+    const vals = dataByYear
+      .get(year)
+      .map((d) => d.fatalities)
+      .filter((v) => v > 0)
+      .sort(d3.ascending);
     if (!vals.length) return;
 
     const q1 = d3.quantile(vals, 0.25) || 1;
@@ -983,11 +1043,17 @@ function createBoxPlot() {
     const iqr = q3 - q1;
 
     const min = vals.find((v) => v >= q1 - 1.5 * iqr) ?? vals[0];
-    const max = [...vals].reverse().find((v) => v <= q3 + 1.5 * iqr) ?? vals[vals.length - 1];
+    const max = [...vals].reverse().find((v) => v <= q3 + 1.5 * iqr) ??
+      vals[vals.length - 1];
 
     const cx = x(year) + x.bandwidth() / 2;
 
-    g.append("line").attr("x1", cx).attr("x2", cx).attr("y1", y(min)).attr("y2", y(max)).attr("stroke", "#555");
+    g.append("line")
+      .attr("x1", cx)
+      .attr("x2", cx)
+      .attr("y1", y(min))
+      .attr("y2", y(max))
+      .attr("stroke", "#555");
 
     g.append("rect")
       .attr("x", cx - boxWidth / 2)
@@ -997,17 +1063,43 @@ function createBoxPlot() {
       .attr("fill", colors.tertiary)
       .attr("opacity", 0.8);
 
-    g.append("line").attr("x1", cx - boxWidth / 2).attr("x2", cx + boxWidth / 2).attr("y1", y(med)).attr("y2", y(med)).attr("stroke", "#333");
+    g.append("line")
+      .attr("x1", cx - boxWidth / 2)
+      .attr("x2", cx + boxWidth / 2)
+      .attr("y1", y(med))
+      .attr("y2", y(med))
+      .attr("stroke", "#333");
 
-    g.append("line").attr("x1", cx - boxWidth / 2).attr("x2", cx + boxWidth / 2).attr("y1", y(min)).attr("y2", y(min)).attr("stroke", "#555");
-    g.append("line").attr("x1", cx - boxWidth / 2).attr("x2", cx + boxWidth / 2).attr("y1", y(max)).attr("y2", y(max)).attr("stroke", "#555");
+    g.append("line")
+      .attr("x1", cx - boxWidth / 2)
+      .attr("x2", cx + boxWidth / 2)
+      .attr("y1", y(min))
+      .attr("y2", y(min))
+      .attr("stroke", "#555");
+    g.append("line")
+      .attr("x1", cx - boxWidth / 2)
+      .attr("x2", cx + boxWidth / 2)
+      .attr("y1", y(max))
+      .attr("y2", y(max))
+      .attr("stroke", "#555");
   });
 
-  g.append("g").attr("transform", `translate(0,${height})`).call(d3.axisBottom(x).tickFormat(d3.format("d")));
+  g.append("g")
+    .attr("transform", `translate(0,${height})`)
+    .call(d3.axisBottom(x).tickFormat(d3.format("d")));
   g.append("g").call(d3.axisLeft(y).ticks(6, "~s"));
 
-  g.append("text").attr("transform", "rotate(-90)").attr("x", -height / 2).attr("y", -60).attr("text-anchor", "middle").text("Fatalities per year");
-  g.append("text").attr("x", width / 2).attr("y", height + 40).attr("text-anchor", "middle").text("Year");
+  g.append("text")
+    .attr("transform", "rotate(-90)")
+    .attr("x", -height / 2)
+    .attr("y", -60)
+    .attr("text-anchor", "middle")
+    .text("Fatalities per year");
+  g.append("text")
+    .attr("x", width / 2)
+    .attr("y", height + 40)
+    .attr("text-anchor", "middle")
+    .text("Year");
 }
 
 function createRegionalLineChart() {
@@ -1016,10 +1108,8 @@ function createRegionalLineChart() {
   const container = d3.select("#linear-chart");
   container.html("");
 
-  // Regions we want to plot
   const REGIONS = ["Africa", "Middle East & Asia"];
 
-  // --- 1) Build region toggle UI -----------------------------------
   const toolbar = container.append("div").attr("class", "linechart-toolbar");
   toolbar.append("label").style("font-weight", "700").text("Regions:");
 
@@ -1028,18 +1118,18 @@ function createRegionalLineChart() {
     .style("font-size", "13px")
     .style("color", "#444")
     .style("margin-bottom", "-15px")
+    .text("Hover a line to highlight it");
 
-  // --- 2) Prepare data ---------------------------------------------
   const allYears = Array.from(
     new Set(loadedData.fatalities.map((d) => +d.year))
   )
     .filter((y) => y >= 2018 && y <= 2025)
     .sort((a, b) => a - b);
 
-  // Aggregate fatalities by region + year
   const regionYear = {};
   REGIONS.forEach(
-    (r) => (regionYear[r] = allYears.map((y) => ({ year: y, fatalities: 0 })))
+    (r) =>
+      (regionYear[r] = allYears.map((y) => ({ year: y, fatalities: 0 })))
   );
 
   loadedData.fatalities.forEach((d) => {
@@ -1058,13 +1148,11 @@ function createRegionalLineChart() {
     });
   });
 
-  // Convert into an array for plotting
   const linesData = REGIONS.map((region) => ({
     region,
     values: regionYear[region],
   }));
 
-  // --- 3) Layout ----------------------------------------------------
   const outerW = container.node().clientWidth || 960;
   const margin = { top: 30, right: 20, bottom: 40, left: 60 };
   const width =
@@ -1085,7 +1173,6 @@ function createRegionalLineChart() {
     .append("g")
     .attr("transform", `translate(${margin.left},${margin.top})`);
 
-  // --- 4) Scales ----------------------------------------------------
   const x = d3.scaleLinear().domain(d3.extent(allYears)).range([0, width]);
 
   const y = d3
@@ -1097,7 +1184,6 @@ function createRegionalLineChart() {
     .range([height, 0])
     .nice();
 
-  // --- 5) Axes ------------------------------------------------------
   g.append("g")
     .attr("transform", `translate(0,${height})`)
     .call(d3.axisBottom(x).ticks(allYears.length).tickFormat(d3.format("d")));
@@ -1122,15 +1208,16 @@ function createRegionalLineChart() {
     .attr("transform", "rotate(-90)")
     .text("Fatalities");
 
-  // --- 6) Line generator --------------------------------------------
   const lineGen = d3
     .line()
     .x((d) => x(d.year))
     .y((d) => y(Math.max(1, d.fatalities)))
     .curve(d3.curveMonotoneX);
 
-  // --- 7) Draw lines -------------------------------------------------
-  const color = d3.scaleOrdinal().domain(REGIONS).range(["#b2182b", "#2166ac"]);
+  const color = d3
+    .scaleOrdinal()
+    .domain(REGIONS)
+    .range(["#b2182b", "#2166ac"]);
 
   const lines = g
     .selectAll(".region-line")
@@ -1144,7 +1231,6 @@ function createRegionalLineChart() {
     .attr("opacity", 0.85)
     .attr("d", (d) => lineGen(d.values));
 
-  // --- 8) Add hover highlighting -----------------------------------
   lines
     .style("cursor", "pointer")
     .on("mouseover", function (_, d) {
@@ -1172,7 +1258,6 @@ function createRegionalLineChart() {
       info.text("Hover a line to highlight it");
     });
 
-  // --- 9) Add legend ------------------------------------------------
   const legend = g.append("g").attr("transform", "translate(0,-20)");
 
   legend
@@ -1183,11 +1268,7 @@ function createRegionalLineChart() {
     .attr("transform", (d, i) => `translate(${i * 150},0)`)
     .each(function (region) {
       const gLegend = d3.select(this);
-      gLegend
-        .append("rect")
-        .attr("width", 16)
-        .attr("height", 16)
-        .attr("fill", color(region));
+      gLegend.append("rect").attr("width", 16).attr("height", 16).attr("fill", color(region));
       gLegend.append("text").attr("x", 22).attr("y", 12).text(region);
     });
 }
@@ -1312,8 +1393,7 @@ function createEventTrendAreaChart() {
 
   const lookup = new Map(data.map((d) => [d.year, d]));
   const tooltip = container.append("div").attr("class", "tooltip");
-  const overlay = g
-    .append("rect")
+  g.append("rect")
     .attr("class", "overlay")
     .attr("fill", "transparent")
     .attr("width", width)
@@ -1364,7 +1444,8 @@ function createMonthlyEventLines() {
     "December",
   ];
   const monthIndex = new Map(MONTHS.map((m, i) => [m, i]));
-  const parseDate = (year, month) => new Date(year, monthIndex.get(month), 1);
+  const parseDate = (year, month) =>
+    new Date(year, monthIndex.get(month), 1);
 
   const filtered = loadedData.politicalViolenceMonthly.filter(
     (d) =>
@@ -1525,11 +1606,126 @@ function createMonthlyEventLines() {
     .attr("transform", (d, i) => `translate(0, ${i * 22})`)
     .each(function (country) {
       const row = d3.select(this);
-      row
-        .append("rect")
-        .attr("width", 16)
-        .attr("height", 16)
-        .attr("fill", color(country));
+      row.append("rect").attr("width", 16).attr("height", 16).attr("fill", color(country));
       row.append("text").attr("x", 22).attr("y", 12).text(country);
     });
+}
+
+function createChoropleth() {
+  if (!loadedData.fatalities || !worldFeatures || !worldFeatures.length) return;
+
+  const container = d3.select("#choropleth-map");
+  if (container.empty()) return;
+
+  container.html("");
+
+  const width = container.node().clientWidth || 900;
+  const height = 650;
+
+  const svg = container
+    .append("svg")
+    .attr("viewBox", `0 0 ${width} ${height}`)
+    .attr("preserveAspectRatio", "xMidYMid meet");
+
+  const fatalitiesByCountry = d3.rollup(
+    loadedData.fatalities,
+    (records) => d3.sum(records, (d) => d.fatalities),
+    (d) => canonicalCountryName(d.country)
+  );
+
+  const maxValue = d3.max(fatalitiesByCountry.values()) || 1;
+  const colorScale = d3
+    .scaleSequentialSqrt(d3.interpolateYlOrRd)
+    .domain([0, maxValue]);
+
+  const projection = d3
+    .geoNaturalEarth1()
+    .fitSize([width, height], { type: "FeatureCollection", features: worldFeatures });
+  const path = d3.geoPath(projection);
+  const tooltip = container.append("div").attr("class", "tooltip");
+
+  svg
+    .append("g")
+    .selectAll("path.country")
+    .data(worldFeatures)
+    .enter()
+    .append("path")
+    .attr("class", "country")
+    .attr("d", path)
+    .attr("fill", (d) => {
+      const total = fatalitiesByCountry.get(
+        canonicalCountryName(d.properties.name)
+      );
+      return total ? colorScale(total) : "#f3f4f6";
+    })
+    .attr("stroke", "#d1d5db")
+    .attr("stroke-width", 0.5)
+    .on("mousemove", function (event, d) {
+      const total =
+        fatalitiesByCountry.get(canonicalCountryName(d.properties.name)) || 0;
+      tooltip
+        .classed("visible", true)
+        .style("left", event.pageX + 10 + "px")
+        .style("top", event.pageY - 10 + "px")
+        .html(
+          `${d.properties.name}<br>${total.toLocaleString()} fatalities`
+        );
+      d3.select(this).attr("stroke-width", 1).attr("stroke", "#111827");
+    })
+    .on("mouseout", function () {
+      tooltip.classed("visible", false);
+      d3.select(this).attr("stroke-width", 0.5).attr("stroke", "#d1d5db");
+    });
+
+  const defs = svg.append("defs");
+  const gradientId = "choropleth-gradient";
+  const gradient = defs.append("linearGradient").attr("id", gradientId);
+  gradient
+    .selectAll("stop")
+    .data(d3.range(0, 1.01, 0.2))
+    .enter()
+    .append("stop")
+    .attr("offset", (d) => `${d * 100}%`)
+    .attr("stop-color", (d) => colorScale(d * maxValue));
+
+  const legendWidth = 220;
+  const legendHeight = 12;
+  const legendScale = d3
+    .scaleLinear()
+    .domain([0, maxValue])
+    .range([0, legendWidth]);
+
+  const legend = svg
+    .append("g")
+    .attr(
+      "transform",
+      `translate(${width - legendWidth - 40}, ${height - legendHeight - 24})`
+    );
+
+  legend
+    .append("rect")
+    .attr("width", legendWidth)
+    .attr("height", legendHeight)
+    .attr("rx", 6)
+    .attr("fill", `url(#${gradientId})`);
+
+  legend
+    .append("g")
+    .attr("transform", `translate(0, ${legendHeight + 4})`)
+    .call(
+      d3
+        .axisBottom(legendScale)
+        .tickValues([0, maxValue * 0.25, maxValue * 0.5, maxValue * 0.75, maxValue])
+        .tickFormat(d3.format(".2s"))
+    )
+    .select(".domain")
+    .remove();
+
+  legend
+    .append("text")
+    .attr("x", legendWidth / 2)
+    .attr("y", legendHeight - 20)
+    .attr("text-anchor", "middle")
+    .attr("fill", "#374151")
+    .text("Total fatalities (2018–2024)");
 }

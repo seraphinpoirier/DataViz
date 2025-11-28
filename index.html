@@ -3,147 +3,146 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width" />
-    <title>Homepage</title>
+    <title>Homepage – The Vizionaries</title>
+
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Fira+Sans:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Roboto+Slab:wght@100..900&display=swap"
       rel="stylesheet"
     />
+
+    <link rel="stylesheet" href="index.css" />
   </head>
-  <link rel="stylesheet" href="index.css" />
 
-  <body>
+  <body class="site-body home-page">
     <div class="topnav">
-      <a class="active" href="index.html">Home</a>
-      <a href="visualizations.html">Visualizations</a>
+      <a class="brand" href="index.html">The Vizionaries</a>
+      <nav class="topnav-links">
+        <a class="active" href="index.html">Home</a>
+        <a href="visualizations.html">Visualizations</a>
+      </nav>
     </div>
 
-    <div class="header">
-      <h1>Data Visualizations</h1>
-      <p>Visualizing Conflict and Human Suffering through Data</p>
-    </div>
-
-    <div class="introduction">
-      <h2>Group: Data Vizionaries</h2>
-      <p>
-        Project by<br />
-        Stefano Infusini (<i>S5211120</i>), Aymen M. Saney (<i>S6021940</i>) &
-        Séraphin Poirier (<i>S9259977</i>)
-      </p>
-
-      <h2>Introduction</h2>
-      <p>
-        The world is a violent place plagued by conflict. This project aims to
-        help users realise the different types of violences which have been
-        inflicted to civilians in these past years. Through interactive data
-        visualizations, we explore the tragic reality of modern conflicts, their
-        human cost, and patterns that emerge from systematic data collection.
-      </p>
-
-      <h2>About the Data</h2>
-      <p>
-        This visualization project utilizes mainly uses the following data source to provide a
-        comprehensive view of conflict and human suffering:
-      </p>
-      <ul>
-        <li>
-          <strong>ACLED (Armed Conflict Location & Event Data Project):</strong>
-          Real-time data collection of political violence and protest events
-          worldwide.
-        </li>
-      </ul>
-      <p>
-        The datasets used in this project cover various aspects of conflict
-        including:
-      </p>
-      <ol>
-        <li>Fatalities by conflict type and region</li>
-        <li>Civilian vs. combatant casualties</li>
-        <li>Geographic distribution of conflicts</li>
-      </ol>
-
-      <h2>Project Sections</h2>
-
-      <section class="section-preview">
-        <h3>Section 1 —Comparisons</h3>
-        <p>
-          This section presents five mandatory visualizations exploring conflict
-          data from multiple perspectives:
+    <header class="hero home-hero">
+      <div class="hero-content">
+        <p class="eyebrow">Data Vizionaries</p>
+        <h1>Visualizing Conflict &amp; Human Suffering</h1>
+        <p class="hero-lede">
+          Interactive, research-backed visualizations that reveal how modern conflicts
+          unfold, who they impact most, and where violence intensifies.
         </p>
-        <ul>
-          <li><strong>Bar Chart:</strong> Fatalities by conflict type across different regions</li>
-          <li><strong>Grouped Bar Chart:</strong> Comparison of civilian and combatant casualties over time</li>
-          <li><strong>Heatmap:</strong> Temporal patterns of conflict events by region</li>
-          <li><strong>100% Stacked Bar Chart:</strong> Proportion of different violence types within each region</li>
-          <li><strong>Waffle Chart:</strong> Distribution of Event Types</li>
-        </ul>
+        <div class="hero-actions">
+          <a class="btn primary-btn" href="visualizations.html">Explore the dashboards</a>
+          <a class="btn ghost-btn" href="#project-overview">About the project</a>
+        </div>
+      </div>
+      <div class="hero-stats">
+        <article>
+          <p class="metric-label">Team</p>
+          <p class="metric-value">Data Vizionaries</p>
+          <p class="metric-meta">
+            Stefano Infusini · Aymen M. Saney · Séraphin Poirier
+          </p>
+        </article>
+        <article>
+          <p class="metric-label">Focus</p>
+          <p class="metric-value">Political violence</p>
+          <p class="metric-meta">2018–2025, 100+ countries</p>
+        </article>
+        <article>
+          <p class="metric-label">Data</p>
+          <p class="metric-value">ACLED</p>
+          <p class="metric-meta">Updated October 24, 2025</p>
+        </article>
+      </div>
+    </header>
+
+    <main class="site-main">
+      <section id="project-overview" class="info-card">
+        <h2>Project overview</h2>
         <p>
-          Each visualization is interactive, allowing users to explore the data
-          in detail. Hover over elements to see specific values and uncover patterns.
+          The world is a violent place plagued by conflict. This project helps
+          readers grasp the different types of violence inflicted on civilians in
+          recent years. Through interactive visualizations we unpack the tragic
+          reality of modern conflicts, their human cost, and the patterns that emerge from systematic data collection.
         </p>
       </section>
 
-      <section class="section-preview">
-        <h3>Section 2 — Distributions</h3>
-        <p>
-          This section focuses on how fatalities and events are distributed across time and geography,
-          highlighting inequality and concentration of conflict impact.
-        </p>
-        <ul>
-          <li><strong>Histogram:</strong> Distribution of event-level fatality counts</li>
-          <li><strong>Ridgeline Plot:</strong> Density of fatalities across regions</li>
-          <li><strong>Boxplot:</strong> Distribution of fatalities over the years, including medians and outliers</li>
-        </ul>
-        <p>
-          These visualizations allow users to examine the spread, inequality, and variability within conflict data.
-        </p>
+      <section class="info-card data-card">
+        <div>
+          <h2>About the data</h2>
+          <p>
+            We rely on the ACLED (Armed Conflict Location &amp; Event Data Project)
+            — a globally trusted source of political violence and protest records.
+          </p>
+          <p>Key measures covered in this project include:</p>
+          <ul>
+            <li>Fatalities by conflict type and region</li>
+            <li>Civilian vs. combatant casualties</li>
+            <li>Geographic distribution and temporal cadence of violence</li>
+          </ul>
+        </div>
+        <aside class="data-highlight">
+          <p class="metric-label">Data pull</p>
+          <p class="metric-value">24 Oct 2025</p>
+          <p class="metric-meta">Latest CSV exports provided in the repo.</p>
+        </aside>
       </section>
 
-      <section class="section-preview">
-        <h3>Section 3 — Visualising Time</h3>
-        <p>
-          This section shows how conflict patterns change over time across regions, event types, and countries.
-        </p>
-        <ul>
-          <li>
-            <strong>Regional Fatalities Over Time:</strong> Yearly comparison of fatalities in Africa and the Middle East &amp; Asia.
-          </li>
-          <li>
-            <strong>Event Types Over Time:</strong> Stacked area chart showing how demonstrations and civilian-targeting events evolve.
-          </li>
-          <li>
-            <strong>Monthly Political Violence Events:</strong> Monthly trends for key countries to highlight peaks and seasonality.
-          </li>
-        </ul>
-        <p>
-          These charts help reveal major temporal shifts and patterns in political violence.
-        </p>
+      <section class="info-card sections-card">
+        <h2>What you can explore</h2>
+        <div class="sections-grid">
+          <article>
+            <p class="section-tag">Section 1</p>
+            <h3>Comparisons</h3>
+            <p>Contrast actors, regions, and event types side-by-side.</p>
+            <ul>
+              <li>Top countries by fatalities</li>
+              <li>Civilian vs combatant losses</li>
+              <li>Regional heatmaps &amp; composition</li>
+            </ul>
+          </article>
+          <article>
+            <p class="section-tag">Section 2</p>
+            <h3>Distributions</h3>
+            <p>Understand how fatalities are spread across events and years.</p>
+            <ul>
+              <li>Histogram of event severity</li>
+              <li>Ridgeline of key regions</li>
+              <li>Boxplots of yearly totals</li>
+            </ul>
+          </article>
+          <article>
+            <p class="section-tag">Section 3</p>
+            <h3>Time</h3>
+            <p>Track how violence evolves over months and years.</p>
+            <ul>
+              <li>Regional timelines</li>
+              <li>Event type area chart</li>
+              <li>Monthly top countries</li>
+            </ul>
+          </article>
+          <article>
+            <p class="section-tag">Section 4</p>
+            <h3>Maps</h3>
+            <p>Locate hotspots and view plans for additional spatial work.</p>
+            <ul>
+              <li>Global fatalities choropleth</li>
+              <li>Future thematic maps</li>
+            </ul>
+          </article>
+        </div>
       </section>
-      
-
-      <section class="section-preview">
-        <h3>Section 4 — Maps</h3>
-        <p>
-            - - - -
-        </p>
-        <ul>
-          <li><strong>Choropleth:</strong> - - - </li>
-          <li><strong>Map 2:</strong> - - - - - </li>
-          <li><strong>Map 3:</strong> - - - - - -</li>
-        </ul>
-        <p>
-          - - - -
-        </p>
-    </section>
-
-    </div>
+    </main>
 
     <footer class="footer">
       <p>&copy; <span id="footer-year"></span> Vizionaries</p>
     </footer>
+
     <script>
-      document.getElementById("footer-year").textContent = new Date().getFullYear();
+      document.getElementById("footer-year").textContent =
+        new Date().getFullYear();
     </script>
   </body>
 </html>

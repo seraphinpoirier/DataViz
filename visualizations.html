@@ -3,216 +3,287 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width" />
-    <title>Visualizations</title>
+    <title>Visualizations – The Vizionaries</title>
+
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Fira+Sans:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Roboto+Slab:wght@100..900&display=swap" rel="stylesheet"/>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fira+Sans:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Roboto+Slab:wght@100..900&display=swap"
+      rel="stylesheet"
+    />
+
     <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://unpkg.com/topojson-client@3"></script>
     <link rel="stylesheet" href="index.css" />
-    <style>
-      .page-index{position:sticky;top:0;z-index:10;background:#fff;border-bottom:1px solid #e5e7eb}
-      .page-index .container{max-width:1100px;margin:0 auto;padding:10px 16px;display:flex;gap:12px;flex-wrap:wrap}
-      .page-index a{font-family:"Fira Sans",system-ui,sans-serif;text-decoration:none;color:#1f2937;padding:8px 12px;border-radius:10px;border:1px solid #e5e7eb}
-      .page-index a:hover{background:#f3f4f6}
-      .page-index a.active-link{background:#1D4ED8!important;color:#ffffff!important;border-color:#1D4ED8!important}
-      details.section{max-width:1100px;margin:18px auto;padding:0 16px;border-radius:14px;border:1px solid #e5e7eb;background:#fff}
-      details.section[open]{box-shadow:0 2px 10px rgba(0,0,0,.04)}
-      details.section summary{list-style:none;cursor:pointer;padding:18px}
-      details.section summary::-webkit-details-marker{display:none}
-      details.section h2{margin:0;font-family:"Roboto Slab",serif}
-      .section-subtitle{margin:6px 0 0 0;color:#4b5563;font-weight:600}
-      .section-body{padding:0 18px 18px 18px}
-      .chart-section{margin:18px 0}
-      .chart-section h3{font-family:"Roboto Slab",serif;margin-bottom:6px}
-      .chart-section p{margin:0 0 10px 0;color:#374151}
-      .chart-container{border:1px solid #e5e7eb;border-radius:10px;background:#fafafa}
-      #choropleth-map{height:520px;overflow:hidden}
-      #choropleth-map svg{width:100%!important;height:100%!important;max-width:none!important;max-height:none!important}
-      .chart-subsection{margin:22px 0}
-      html{scroll-behavior:smooth}
-    </style>
   </head>
 
-  <body>
+  <body class="site-body visualizations-page">
+    <!-- TOP NAV -->
     <div class="topnav">
-      <a href="index.html">Home</a>
-      <a class="active" href="visualizations.html">Visualizations</a>
+      <a class="brand" href="index.html">The Vizionaries</a>
+      <nav class="topnav-links">
+        <a href="index.html">Home</a>
+        <a class="active" href="visualizations.html">Visualizations</a>
+      </nav>
     </div>
 
-    <div class="header">
-      <h1>Data Visualizations</h1>
-      <p>Exploring Conflict Data Through Interactive Charts</p>
-    </div>
-
-    <nav class="page-index" aria-label="On this page">
-      <div class="container">
-        <a href="#section-comparisons">Section 1 — Comparisons</a>
-        <a href="#section-distributions">Section 2 — Distributions</a>
-        <a href="#section-timeperiods">Section 3 — Time periods</a>
-        <a href="#section-maps">Section 4 — Maps</a>
+    <!-- SIMPLE HERO -->
+    <header class="viz-hero-compact">
+      <div class="viz-hero-inner">
+        <div>
+          <p class="eyebrow">Global conflict observatory</p>
+          <h1>Conflict &amp; Human Impact Dashboard</h1>
+          <p class="hero-lede">
+            Explore fatalities, event types, and spatial hotspots through an
+            interactive set of linked visualizations powered by ACLED data.
+          </p>
+        </div>
+        <div class="hero-mini-stats">
+          <div>
+            <p class="metric-label">Years covered</p>
+            <p class="metric-value">2018–2025</p>
+          </div>
+          <div>
+            <p class="metric-label">Countries tracked</p>
+            <p class="metric-value">100+</p>
+          </div>
+        </div>
       </div>
-    </nav>
+    </header>
 
-    <div class="introduction">
-      <h2>Interactive Data Exploration</h2>
-      <p>This page presents a comprehensive set of visualizations examining conflict and human suffering data. Use the interactive features to explore the data in detail.</p>
+    <main class="viz-layout">
+      <!-- TAB STRIP -->
+      <section class="viz-tabs" aria-label="Visualization sections">
+        <button
+          class="viz-tab-button active"
+          type="button"
+          data-target="tab-comparisons"
+        >
+          Comparisons
+        </button>
+        <button
+          class="viz-tab-button"
+          type="button"
+          data-target="tab-distributions"
+        >
+          Distributions
+        </button>
+        <button
+          class="viz-tab-button"
+          type="button"
+          data-target="tab-time"
+        >
+          Time
+        </button>
+        <button
+          class="viz-tab-button"
+          type="button"
+          data-target="tab-maps"
+        >
+          Maps
+        </button>
+      </section>
 
-      <details id="section-comparisons" class="section" open>
-        <summary>
-          <h2>Section 1 — Comparisons</h2>
-          <p class="section-subtitle">Comparing categories across countries, years, and regions</p>
-        </summary>
-        <div class="section-body">
-          <section id="bar-chart-section" class="chart-section">
-            <h3>Top Countries by Total Fatalities</h3>
-            <p>Top 10 countries with the highest total reported fatalities across all years.</p>
-            <div id="bar-chart" class="chart-container" style="height:420px"></div>
-          </section>
+      <!-- TAB: COMPARISONS -->
+      <section
+        id="tab-comparisons"
+        class="viz-tab-panel active"
+        aria-label="Comparisons"
+      >
+        <header class="tab-header">
+          <h2>Comparisons across countries &amp; regions</h2>
+          <p>
+            Use these views to see where conflict is most intense and how event
+            types differ across regions.
+          </p>
+        </header>
 
-          <section id="grouped-bar-chart-section" class="chart-section">
-            <h3>Civilian vs Combatant Fatalities by Year</h3>
-            <p>Civilian and combatant fatalities from 2018 to 2024.</p>
-            <div id="grouped-bar-chart" class="chart-container" style="height:420px"></div>
-          </section>
+        <div class="chart-grid">
+          <article class="chart-card chart-span-2">
+            <header class="chart-card-header">
+              <h3>Top countries by total fatalities</h3>
+              <p>Top 10 countries with the highest total reported fatalities.</p>
+            </header>
+            <div id="bar-chart" class="chart-canvas chart-large"></div>
+          </article>
 
-          <section id="heatmap-section" class="chart-section">
-            <h3>Events Targeting Civilians by Region and Year</h3>
-            <p>Intensity of events targeting civilians by region and year.</p>
-            <div id="heatmap" class="chart-container" style="height:520px"></div>
-          </section>
+          <article class="chart-card">
+            <header class="chart-card-header">
+              <h3>Civilian vs combatant fatalities by year</h3>
+              <p>Global totals, 2018–2024.</p>
+            </header>
+            <div id="grouped-bar-chart" class="chart-canvas chart-medium"></div>
+          </article>
 
-          <section id="stacked-bar-section" class="chart-section">
-            <h3>Event Types by Region</h3>
-            <p>Proportional breakdown of different event types by region.</p>
-            <div id="stacked-bar-chart" class="chart-container" style="height:420px"></div>
-          </section>
+          <article class="chart-card">
+            <header class="chart-card-header">
+              <h3>Event types by region</h3>
+              <p>Share of demonstrations, civilian targeting, and other events.</p>
+            </header>
+            <div id="stacked-bar-chart" class="chart-canvas chart-medium"></div>
+          </article>
 
-          <section id="waffle-section" class="chart-section">
-            <h3>Event Types</h3>
-            <p>Most recorded political events are demonstrations rather than direct attacks on civilians.</p>
-            <div id="waffle-chart" class="chart-container" style="height:420px"></div>
-          </section>
+          <article class="chart-card">
+            <header class="chart-card-header">
+              <h3>Event type mix</h3>
+              <p>How much of recorded political activity is protest vs violence.</p>
+            </header>
+            <div id="waffle-chart" class="chart-canvas chart-compact"></div>
+          </article>
+
+          <article class="chart-card chart-span-2">
+            <header class="chart-card-header">
+              <h3>Events targeting civilians by region &amp; year</h3>
+              <p>Heatmap of civilian-targeting events for key world regions.</p>
+            </header>
+            <div id="heatmap" class="chart-canvas chart-tall"></div>
+          </article>
         </div>
-      </details>
+      </section>
 
-      <details id="section-distributions" class="section">
-        <summary>
-          <h2>Section 2 — Distributions</h2>
-          <p class="section-subtitle">How values spread: histograms, violin/ridgeline, and boxplots</p>
-        </summary>
-        <div class="section-body">
-          <section id="histogram-subsection" class="chart-section">
-            <h3>Histogram of Fatalities</h3>
-            <p>Distribution of events involving fatalities grouped by year.</p>
-            <div id="histogram-chart" class="chart-container" style="height:380px"></div>
-          </section>
+      <!-- TAB: DISTRIBUTIONS -->
+      <section
+        id="tab-distributions"
+        class="viz-tab-panel"
+        aria-label="Distributions"
+      >
+        <header class="tab-header">
+          <h2>Distributions and spread</h2>
+          <p>
+            Understand how fatalities concentrate across events and how the
+            spread changes over time.
+          </p>
+        </header>
 
-        <section id="violin-subsection" class="chart-section">
-          <h3>Yearly fatalities in Africa and Middle East & Asia.</h3>
-          <p>Ridgeline chart of the yearly fatality count for the specified regions</p>
-          <div id="violin-plot" class="chart-container" style="height:480px"></div>
-        </section>
+        <div class="chart-grid">
+          <article class="chart-card">
+            <header class="chart-card-header">
+              <h3>Histogram of fatalities</h3>
+              <p>Distribution of events by number of fatalities.</p>
+            </header>
+            <div id="histogram-chart" class="chart-canvas chart-medium"></div>
+          </article>
 
+          <article class="chart-card chart-span-2">
+            <header class="chart-card-header">
+              <h3>Yearly fatalities in Africa vs Middle East &amp; Asia</h3>
+              <p>Ridgeline view showing how yearly totals stack up by region.</p>
+            </header>
+            <div id="violin-plot" class="chart-canvas chart-tall"></div>
+          </article>
 
-          <section id="boxplot-subsection" class="chart-section">
-            <h3>Boxplot of Fatalities by Year</h3>
-            <p>A different view of the yearly fatality count.</p>
-            <div id="box-plot" class="chart-container" style="height:380px"></div>
-          </section>
+          <article class="chart-card chart-span-2">
+            <header class="chart-card-header">
+              <h3>Boxplot of fatalities by year</h3>
+              <p>Variation in yearly fatalities across countries, 2018–2024.</p>
+            </header>
+            <div id="box-plot" class="chart-canvas chart-medium"></div>
+          </article>
         </div>
-      </details>
-    </div>
+      </section>
 
-    <details id="section-timeperiods" class="section">
-        <summary>
-          <h2>Section 3 — Time periods</h2>
-          <p class="section-subtitle">How values evolve with time</p>
-        </summary>
-        <div class="section-body">
-          <section id="linear-subsection" class="chart-section">
-            <h3>Regional Fatalities Over Time</h3>
-            <p>Compare the yearly reported fatalities for Africa and the Middle East &amp; Asia to spot diverging trends.</p>
-            <div id="linear-chart" class="chart-container" style="height:420px"></div>
-          </section>
+      <!-- TAB: TIME -->
+      <section id="tab-time" class="viz-tab-panel" aria-label="Time">
+        <header class="tab-header">
+          <h2>How values evolve over time</h2>
+          <p>
+            Track long-term trajectories of violence and protest, plus monthly
+            patterns in the most affected countries.
+          </p>
+        </header>
 
-          <section id="area-subsection" class="chart-section">
-            <h3>Event Types Over Time</h3>
-            <p>Stacked area chart showing how demonstration events versus events targeting civilians evolved from 2018 onward.</p>
-            <div id="area-chart" class="chart-container" style="height:420px"></div>
-          </section>
+        <div class="chart-grid">
+          <article class="chart-card chart-span-2">
+            <header class="chart-card-header">
+              <h3>Regional fatalities over time</h3>
+              <p>Compare yearly fatalities in Africa and the Middle East &amp; Asia.</p>
+            </header>
+            <div id="linear-chart" class="chart-canvas chart-large"></div>
+          </article>
 
-          <section id="monthly-subsection" class="chart-section">
-            <h3>Monthly Political Violence Events</h3>
-            <p>Top countries with the highest volumes of political violence events by month, highlighting peaks and seasonality.</p>
-            <div id="monthly-lines" class="chart-container" style="height:440px"></div>
-          </section>
+          <article class="chart-card chart-span-2">
+            <header class="chart-card-header">
+              <h3>Event types over time</h3>
+              <p>Stacked area of demonstrations vs events targeting civilians.</p>
+            </header>
+            <div id="area-chart" class="chart-canvas chart-large"></div>
+          </article>
+
+          <article class="chart-card chart-span-2">
+            <header class="chart-card-header">
+              <h3>Monthly political violence events</h3>
+              <p>Top countries with the highest monthly event volumes.</p>
+            </header>
+            <div id="monthly-lines" class="chart-canvas chart-tall"></div>
+          </article>
         </div>
-      </details>
-    </div>
+      </section>
 
-    <details id="section-maps" class="section">
-      <summary>
-        <h2>Section 4 — Maps</h2>
-        <p class="section-subtitle"></p>
-      </summary>
-      <div class="section-body">
-        <section id="" class="chart-section">
-          <h3>Cloropeth</h3>
-          <p> - -  - </p>
-          <div id="" class="chart-container" style="height:420px"></div>
-        </section>
+      <!-- TAB: MAPS -->
+      <section id="tab-maps" class="viz-tab-panel" aria-label="Maps">
+        <header class="tab-header">
+          <h2>Spatial patterns and hotspots</h2>
+          <p>
+            See how conflict severity shifts across continents and identify
+            emerging hotspots.
+          </p>
+        </header>
 
-        <section id="" class="chart-section">
-          <h3>Map 2</h3>
-          <p> - - - </p>
-          <div id="" class="chart-container" style="height:420px"></div>
-        </section>
+        <div class="chart-grid map-grid">
+          <article class="chart-card chart-span-2">
+            <header class="chart-card-header">
+              <h3>Global fatalities choropleth</h3>
+              <p>Countries shaded by total reported fatalities, 2018–2024.</p>
+            </header>
+            <div id="choropleth-map" class="chart-canvas chart-map"></div>
+            <p class="map-caption">
+              A Natural Earth projection highlights hotspots that mirror trends
+              visible in the comparison and time-series charts.
+            </p>
+          </article>
 
-        <section id="" class="chart-section">
-          <h3>Map 3</h3>
-          <p> - - - </p>
-          <div id="monthly-lines" class="chart-container" style="height:440px"></div>
-        </section>
-      </div>
-    </details>
-  </div>
+          <article class="chart-card">
+            <header class="chart-card-header">
+              <h3>Map 2</h3>
+              <p>Reserved for a future spatial view (e.g. conflict corridors).</p>
+            </header>
+            <div class="chart-canvas chart-medium"></div>
+          </article>
+
+          <article class="chart-card">
+            <header class="chart-card-header">
+              <h3>Map 3</h3>
+              <p>Reserved for a future spatial view (e.g. civilian-specific map).</p>
+            </header>
+            <div class="chart-canvas chart-medium"></div>
+          </article>
+        </div>
+      </section>
+    </main>
 
     <footer class="footer">
       <p>&copy; <span id="footer-year"></span> Vizionaries</p>
     </footer>
 
     <script>
-      document.getElementById("footer-year").textContent = new Date().getFullYear();
+      // Footer year
+      document.getElementById("footer-year").textContent =
+        new Date().getFullYear();
 
-      const links=[...document.querySelectorAll(".page-index a")];
-      const targets=links.map(a=>document.querySelector(a.getAttribute("href")));
+      // Tab switching
+      const tabButtons = document.querySelectorAll(".viz-tab-button");
+      const tabPanels = document.querySelectorAll(".viz-tab-panel");
 
-      // set initial active on load
-      (function setInitialActive(){
-        links.forEach(l=>l.classList.remove("active-link"));
-        const idx = targets.findIndex(el => el && el.getBoundingClientRect().top >= 0);
-        (idx >= 0 ? links[idx] : links[0]).classList.add("active-link");
-      })();
+      tabButtons.forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const targetId = btn.dataset.target;
 
-      const obs=new IntersectionObserver(entries=>{
-        entries.forEach(e=>{
-          if(e.isIntersecting){
-            links.forEach(l=>l.classList.remove("active-link"));
-            const i=targets.indexOf(e.target);
-            if(i>=0) links[i].classList.add("active-link");
-          }
-        });
-      },{rootMargin:"-50% 0px -40% 0px",threshold:[0,1]});
+          tabButtons.forEach((b) => b.classList.remove("active"));
+          btn.classList.add("active");
 
-      targets.forEach(t=>t&&obs.observe(t));
-
-      document.querySelectorAll('.page-index a[href^="#"]').forEach(a=>{
-        a.addEventListener("click",()=>{
-          const id=a.getAttribute("href").slice(1);
-          const t=document.getElementById(id);
-          if(!t) return;
-          const host=t.closest("details.section");
-          if(host && !host.open) host.open=true;
+          tabPanels.forEach((panel) => {
+            panel.classList.toggle("active", panel.id === targetId);
+          });
         });
       });
     </script>
