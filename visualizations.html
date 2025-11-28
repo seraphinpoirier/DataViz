@@ -274,6 +274,7 @@
       // Tab switching
       const tabButtons = document.querySelectorAll(".viz-tab-button");
       const tabPanels = document.querySelectorAll(".viz-tab-panel");
+      const vizRoot = document.querySelector("#viz-root"); // section to scroll to
     
       tabButtons.forEach((btn) => {
         btn.addEventListener("click", () => {
@@ -286,14 +287,23 @@
             panel.classList.toggle("active", panel.id === targetId);
           });
     
-          window.scrollTo({
-            top: 0,
-            left: 0,
-            behavior: "auto" // or "smooth" if you want an animation
-          });
+          // Only scroll if we've gone past the top of the viz section
+          if (vizRoot) {
+            const top = vizRoot.getBoundingClientRect().top + window.pageYOffset;
+            if (window.pageYOffset > top) {
+              window.scrollTo({
+                top,
+                left: 0,
+                behavior: "auto" // or "smooth" if you prefer
+              });
+            }
+          }
         });
       });
     </script>
+    
+    
+    
     
 
     <script src="visualizations.js"></script>

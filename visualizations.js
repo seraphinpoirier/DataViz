@@ -1901,7 +1901,7 @@ function createCartogram() {
     .attr("viewBox", `0 0 ${width} ${height}`)
     .attr("preserveAspectRatio", "xMidYMid meet");
 
-  // 1. Aggregate total fatalities by country
+  // 1. Aggregate fatalities by country
   const fatalitiesByCountry = d3.rollup(
     loadedData.fatalities,
     (records) => d3.sum(records, (d) => d.fatalities || 0),
@@ -1910,143 +1910,130 @@ function createCartogram() {
 
   const maxValue = d3.max(fatalitiesByCountry.values()) || 1;
 
-  // 2. Projection for initial positions
+  // 2. Projection and path
   const projection = d3
     .geoNaturalEarth1()
     .fitSize([width, height], { type: "FeatureCollection", features: worldFeatures });
 
   const path = d3.geoPath(projection);
+  const tooltip = container.append("div").attr("class", "tooltip");
+
+  // 3. Color and scale for deformation
+  const colorScale = d3
+    .scaleSequentialSqrt(d3.interpolateYlOrRd)
+    .domain([0, maxValue]);
+
+  // Countries with zero value will still be visible but small
+  const scaleFactor = d3
+    .scaleSqrt()
+    .domain([0, maxValue])
+    .range([0.3, 3]); // min and max deformation
+
+  // 4. Draw deformed country shapes
+  const features = worldFeatures.filter((f) => {
+    const countryName = canonicalCountryName(f.properties.name);
+    return fatalitiesByCountry.has(countryName);
+  });
 
   svg
     .append("g")
-    .selectAll("path")
-    .data(worldFeatures)
+    .selectAll("path.country-cartogram")
+    .data(features)
     .enter()
     .append("path")
+    .attr("class", "country-cartogram")
     .attr("d", path)
-    .attr("fill", "#f9fafb")
-    .attr("stroke", "#e5e7eb")
-    .attr("stroke-width", 0.4)
-    .attr("opacity", 0.7);
+    .attr("fill", (d) => {
+      const value =
+        fatalitiesByCountry.get(canonicalCountryName(d.properties.name)) || 0;
+      return value ? colorScale(value) : "#f3f4f6";
+    })
+    .attr("stroke", "#d1d5db")
+    .attr("stroke-width", 0.5)
+    .attr("transform", (d) => {
+      const countryName = canonicalCountryName(d.properties.name);
+      const value = fatalitiesByCountry.get(countryName) || 0;
+      const k = scaleFactor(value);
 
-  const tooltip = container.append("div").attr("class", "tooltip");
-
-  // 3. Radius scale and cartogram nodes
-  const maxRadius = 32;
-  const radiusScale = d3
-    .scaleSqrt()
-    .domain([0, maxValue])
-    .range([0, maxRadius]);
-
-  const nodes = [];
-
-  worldFeatures.forEach((feature) => {
-    const countryName = canonicalCountryName(feature.properties.name);
-    const value = fatalitiesByCountry.get(countryName) || 0;
-    if (!value) return;
-
-    const centroid = d3.geoCentroid(feature);
-    const projected = projection(centroid);
-    if (!projected) return;
-
-    const [x0, y0] = projected;
-
-    nodes.push({
-      id: feature.id || countryName,
-      country: feature.properties.name,
-      value,
-      radius: radiusScale(value),
-      x: x0,
-      y: y0,
-      x0,
-      y0,
-    });
-  });
-
-  // 4. Force simulation (Dorling cartogram)
-  const simulation = d3
-    .forceSimulation(nodes)
-    .force("x", d3.forceX((d) => d.x0).strength(0.25))
-    .force("y", d3.forceY((d) => d.y0).strength(0.25))
-    .force("collide", d3.forceCollide((d) => d.radius + 1))
-    .stop();
-
-  // Run a fixed number of ticks synchronously
-  for (let i = 0; i < 150; ++i) simulation.tick();
-  simulation.stop();
-
-  // 5. Draw cartogram circles
-  const circles = svg
-    .append("g")
-    .attr("class", "cartogram-bubbles")
-    .selectAll("circle")
-    .data(nodes)
-    .enter()
-    .append("circle")
-    .attr("cx", (d) => d.x)
-    .attr("cy", (d) => d.y)
-    .attr("r", (d) => d.radius)
-    .attr("fill", (d) =>
-      d3.interpolateYlOrRd(d.value / maxValue || 0)
-    )
-    .attr("stroke", "#7f1d1d")
-    .attr("stroke-width", 0.7)
-    .attr("opacity", 0.92)
+      // scale around projected centroid
+      const [cx, cy] = path.centroid(d);
+      return `translate(${cx},${cy}) scale(${k}) translate(${-cx},${-cy})`;
+    })
     .on("mousemove", function (event, d) {
+      const countryName = canonicalCountryName(d.properties.name);
+      const value = fatalitiesByCountry.get(countryName) || 0;
+
       tooltip
         .classed("visible", true)
         .style("left", event.pageX + 10 + "px")
         .style("top", event.pageY - 10 + "px")
         .html(
-          `${d.country}<br>` +
-            `${d.value.toLocaleString()} fatalities (2018–2024)`
+          `${d.properties.name}<br>${value.toLocaleString()} fatalities (2018–2024)`
         );
-      d3.select(this).attr("stroke-width", 1.2);
+
+      d3.select(this).attr("stroke-width", 1);
     })
     .on("mouseout", function () {
       tooltip.classed("visible", false);
-      d3.select(this).attr("stroke-width", 0.7);
+      d3.select(this).attr("stroke-width", 0.5);
     });
 
-  // 6. Legend (size + color)
+  // 5. Legend (same style as your other maps)
+  const defs = svg.append("defs");
+  const gradientId = "cartogram-gradient";
+  const gradient = defs.append("linearGradient").attr("id", gradientId);
+  gradient
+    .selectAll("stop")
+    .data(d3.range(0, 1.01, 0.2))
+    .enter()
+    .append("stop")
+    .attr("offset", (d) => `${d * 100}%`)
+    .attr("stop-color", (d) => colorScale(d * maxValue));
+
+  const legendWidth = 220;
+  const legendHeight = 12;
+  const legendScale = d3
+    .scaleLinear()
+    .domain([0, maxValue])
+    .range([0, legendWidth]);
+
   const legend = svg
     .append("g")
-    .attr("transform", `translate(${width - 180}, ${height - 180})`);
+    .attr(
+      "transform",
+      `translate(${width - legendWidth - 40}, ${height - legendHeight - 24})`
+    );
 
-  const legendValues = [
-    maxValue * 0.1,
-    maxValue * 0.5,
-    maxValue,
-  ].map((v) => Math.max(1, Math.round(v)));
+  legend
+    .append("rect")
+    .attr("width", legendWidth)
+    .attr("height", legendHeight)
+    .attr("rx", 6)
+    .attr("fill", `url(#${gradientId})`);
 
-  legendValues.forEach((value, i) => {
-    const r = radiusScale(value);
-    const y = 40 + i * (r * 2 + 12);
-
-    legend
-      .append("circle")
-      .attr("cx", 0)
-      .attr("cy", y)
-      .attr("r", r)
-      .attr("fill", d3.interpolateYlOrRd(value / maxValue))
-      .attr("stroke", "#7f1d1d")
-      .attr("stroke-width", 0.7);
-
-    legend
-      .append("text")
-      .attr("x", r + 8)
-      .attr("y", y + 4)
-      .attr("fill", "#374151")
-      .style("font-size", 10)
-      .text(`${d3.format(".2s")(value)} fatalities`);
-  });
+  legend
+    .append("g")
+    .attr("transform", `translate(0, ${legendHeight + 4})`)
+    .call(
+      d3
+        .axisBottom(legendScale)
+        .tickValues([
+          0,
+          maxValue * 0.25,
+          maxValue * 0.5,
+          maxValue * 0.75,
+          maxValue,
+        ])
+        .tickFormat(d3.format(".2s"))
+    )
+    .select(".domain")
+    .remove();
 
   legend
     .append("text")
-    .attr("x", 0)
-    .attr("y", 12)
+    .attr("x", legendWidth / 2)
+    .attr("y", legendHeight - 20)
+    .attr("text-anchor", "middle")
     .attr("fill", "#374151")
-    .style("font-size", 11)
-    .style("font-weight", "600")
-    .text("Cartogram – total fatalities");
+    .text("Total fatalities (area-deformed)");
 }
