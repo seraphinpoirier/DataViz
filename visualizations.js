@@ -1895,8 +1895,8 @@ function createSankeyDiagram() {
   const regionSelect = d3.select("#sankey-region-select");
   const yearSelect = d3.select("#sankey-year-select");
 
-  const WIDTH = 1400;   // intentionally larger than viewport
-  const HEIGHT = 900;
+  const WIDTH = 700;
+  const HEIGHT = 520; // taller to avoid clipping
 
   // =========================
   // Year dropdown (2018–2025)
@@ -1956,11 +1956,11 @@ function createSankeyDiagram() {
   function render() {
     container.selectAll("*").remove();
 
-    // 🔒 FORCE container behavior (overrides .chart-canvas CSS)
+    // Container behavior
     container
       .style("position", "relative")
       .style("width", "100%")
-      .style("height", "400px")
+      .style("height", HEIGHT + "px")
       .style("overflow", "auto")
       .style("border", "1px solid #e5e7eb");
 
@@ -2052,7 +2052,7 @@ function createSankeyDiagram() {
     }
 
     // =========================
-    // SVG (larger than container)
+    // SVG & Zoom
     // =========================
     const svg = container.append("svg")
       .attr("width", WIDTH)
@@ -2072,12 +2072,15 @@ function createSankeyDiagram() {
     svg.call(zoom);
 
     // =========================
-    // Sankey
+    // Sankey layout
     // =========================
     const sankey = d3.sankey()
       .nodeWidth(22)
       .nodePadding(24)
-      .extent([[20, 20], [WIDTH - 20, HEIGHT - 20]]);
+      .extent([
+        [20, 20],
+        [WIDTH - 20, HEIGHT - 80] // 👈 critical fix (extra bottom space)
+      ]);
 
     const graph = sankey({
       nodes: nodes.map(d => ({ ...d })),
@@ -2086,7 +2089,9 @@ function createSankeyDiagram() {
 
     const color = d3.scaleOrdinal(d3.schemeTableau10);
 
-    // Links
+    // =========================
+    // Links (below nodes)
+    // =========================
     zoomLayer.append("g")
       .selectAll("path")
       .data(graph.links)
@@ -2107,7 +2112,9 @@ function createSankeyDiagram() {
       })
       .on("mouseout", hideTip);
 
+    // =========================
     // Nodes
+    // =========================
     const node = zoomLayer.append("g")
       .selectAll("g")
       .data(graph.nodes)
@@ -2136,6 +2143,7 @@ function createSankeyDiagram() {
       .attr("y", d => (d.y0 + d.y1) / 2)
       .attr("dy", "0.35em")
       .style("font-size", "13px")
+      .style("pointer-events", "none")
       .text(d => d.name);
   }
 
@@ -2144,6 +2152,7 @@ function createSankeyDiagram() {
 
   render();
 }
+
 
 
 function createCartogram() {
@@ -2370,30 +2379,24 @@ function createViolenceNetworkDiagram() {
   // Render network diagram
   // -------------------------
   function render() {
-    container.selectAll("*").remove();
-
-    const region = regionSelect.property("value");
-    const year = +yearSelect.property("value");
-
-    const dataNodes = aggregateData(region, year);
-    if (!dataNodes.length) {
-      container.append("div").text("No data for this selection");
-      return;
-    }
-
-    const radiusScale = d3.scaleSqrt()
-      .domain([0, d3.max(dataNodes, d => d.value)])
-      .range([10, 60]);
-
     const svg = container.append("svg")
       .attr("width", WIDTH)
       .attr("height", HEIGHT);
 
+    // -------------------------
+    // LAYERS (important)
+    // -------------------------
+    const linkLayer = svg.append("g").attr("class", "links");
+    const nodeLayer = svg.append("g").attr("class", "nodes");
+    const labelLayer = svg.append("g").attr("class", "labels");
+
     const centerX = WIDTH / 2;
     const centerY = HEIGHT / 2;
 
-    // Central node (region)
-    svg.append("circle")
+    // -------------------------
+    // Central node
+    // -------------------------
+    nodeLayer.append("circle")
       .attr("cx", centerX)
       .attr("cy", centerY)
       .attr("r", 50)
@@ -2401,51 +2404,72 @@ function createViolenceNetworkDiagram() {
       .attr("stroke", "#333")
       .attr("stroke-width", 1.5);
 
-    svg.append("text")
+    labelLayer.append("text")
       .attr("x", centerX)
       .attr("y", centerY)
       .attr("text-anchor", "middle")
       .attr("dy", "0.35em")
       .attr("fill", "#fff")
       .style("font-size", "14px")
+      .style("font-weight", "600")
       .text(region);
 
-    // Arrange violence types in a circle
-    const angleStep = 360 / dataNodes.length;
-    dataNodes.forEach((d, i) => {
-      const angle = (i * angleStep) * (Math.PI / 180);
-      const x = centerX + Math.cos(angle) * 200;
-      const y = centerY + Math.sin(angle) * 200;
+    // -------------------------
+    // Violence nodes (radial)
+    // -------------------------
+    const angleStep = (2 * Math.PI) / dataNodes.length;
 
-      // Link
-      svg.append("line")
+    dataNodes.forEach((d, i) => {
+      const angle = i * angleStep - Math.PI / 2; // start at top
+      const radius = 200;
+
+      const x = centerX + Math.cos(angle) * radius;
+      const y = centerY + Math.sin(angle) * radius;
+
+      const nodeRadius = radiusScale(d.value);
+
+      // ---- LINK (below everything)
+      linkLayer.append("line")
         .attr("x1", centerX)
         .attr("y1", centerY)
         .attr("x2", x)
         .attr("y2", y)
-        .attr("stroke", "#888")
-        .attr("stroke-width", 2);
+        .attr("stroke", "#aaa")
+        .attr("stroke-width", 2)
+        .attr("opacity", 0.8);
 
-      // Node circle
-      svg.append("circle")
+      // ---- NODE
+      nodeLayer.append("circle")
         .attr("cx", x)
         .attr("cy", y)
-        .attr("r", radiusScale(d.value))
+        .attr("r", nodeRadius)
         .attr("fill", colors.secondary)
         .attr("stroke", "#333")
         .attr("stroke-width", 1.2)
-        .on("mousemove", (event) => showTip(`${d.label}<br>${d.value.toLocaleString()}`, event.pageX, event.pageY))
+        .on("mousemove", (event) =>
+          showTip(
+            `<strong>${d.label}</strong><br>${d.value.toLocaleString()}`,
+            event.pageX,
+            event.pageY
+          )
+        )
         .on("mouseout", hideTip);
 
-      // Node label
-      svg.append("text")
-        .attr("x", x)
-        .attr("y", y)
-        .attr("text-anchor", "middle")
-        .attr("dy", "0.35em")
-        .text(d.label)
-        .style("font-size", "12px");
+      // ---- LABEL (outside the node)
+      const labelOffset = nodeRadius + 10;
+      const lx = centerX + Math.cos(angle) * (radius + labelOffset);
+      const ly = centerY + Math.sin(angle) * (radius + labelOffset);
+
+      labelLayer.append("text")
+        .attr("x", lx)
+        .attr("y", ly)
+        .attr("text-anchor", Math.cos(angle) > 0 ? "start" : "end")
+        .attr("dominant-baseline", "middle")
+        .style("font-size", "12px")
+        .style("font-weight", "500")
+        .text(d.label);
     });
+
   }
 
   // -------------------------
