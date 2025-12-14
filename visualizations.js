@@ -2315,10 +2315,18 @@ function createViolenceNetworkDiagram() {
 
   const WIDTH = 900;
   const HEIGHT = 600;
+  const CENTER_RADIUS = 50;
+  const OUTER_RADIUS = 220;
 
-    // =========================
-  // Year dropdown (2018–2025)
   // =========================
+  // Populate dropdowns
+  // =========================
+  regionSelect.selectAll("option")
+    .data(Object.keys(regionGroups))
+    .enter()
+    .append("option")
+    .text(d => d);
+
   const years = [...new Set(
     loadedData.civilianFatalities.map(d => d.year)
   )]
@@ -2331,118 +2339,121 @@ function createViolenceNetworkDiagram() {
     .append("option")
     .text(d => d);
 
-  // =========================
-  // Region dropdown
-  // =========================
-  regionSelect.selectAll("option")
-    .data(Object.keys(regionGroups))
-    .enter()
-    .append("option")
-    .text(d => d);
-
   regionSelect.property("value", Object.keys(regionGroups)[0]);
   yearSelect.property("value", years[years.length - 1]);
 
-  // -------------------------
-  // Aggregate violence data for the selected region/year
-  // -------------------------
-  function aggregateData(region, year) {
+  // =========================
+  // Aggregate data
+  // =========================
+  function aggregate(region, year) {
+    const countries = regionGroups[region].map(canonicalCountryName);
+
     const types = [
-      { key: "civilianFatalities", label: "Civilian fatalities", data: loadedData.civilianFatalities },
-      { key: "eventsTargetingCivilians", label: "Events targeting civilians", data: loadedData.eventsTargetingCivilians },
-      { key: "demonstrationEvents", label: "Demonstration events", data: loadedData.demonstrationEvents },
-      { key: "politicalViolenceMonthly", label: "Political violence events", data: loadedData.politicalViolenceMonthly },
+      { label: "Civilian fatalities", data: loadedData.civilianFatalities, key: "fatalities" },
+      { label: "Events targeting civilians", data: loadedData.eventsTargetingCivilians, key: "events" },
+      { label: "Demonstration events", data: loadedData.demonstrationEvents, key: "events" },
+      { label: "Political violence events", data: loadedData.politicalViolenceMonthly, key: "events" }
     ];
 
     return types.map(t => {
       let sum = 0;
-      if (t.key === "politicalViolenceMonthly") {
-        t.data.forEach(d => {
-          if (regionGroups[region].some(c => canonicalCountryName(c) === canonicalCountryName(d.country))
-              && d.year === year) {
-            sum += d.events;
-          }
-        });
-      } else {
-        t.data.forEach(d => {
-          if (regionGroups[region].some(c => canonicalCountryName(c) === canonicalCountryName(d.country))
-              && d.year === year) {
-            sum += d.fatalities || d.events;
-          }
-        });
-      }
+      t.data.forEach(d => {
+        if (
+          d.year === year &&
+          countries.includes(canonicalCountryName(d.country))
+        ) {
+          sum += d[t.key] || 0;
+        }
+      });
       return { label: t.label, value: sum };
     }).filter(d => d.value > 0);
   }
 
-  // -------------------------
-  // Render network diagram
-  // -------------------------
+  // =========================
+  // Render
+  // =========================
   function render() {
+    container.selectAll("*").remove();
+
+    const region = regionSelect.property("value");
+    const year = +yearSelect.property("value");
+    const nodes = aggregate(region, year);
+
+    if (!nodes.length) {
+      container.append("p")
+        .style("padding", "20px")
+        .text("No data available.");
+      return;
+    }
+
+    const radiusScale = d3.scaleSqrt()
+      .domain([0, d3.max(nodes, d => d.value)])
+      .range([14, 60]);
+
     const svg = container.append("svg")
       .attr("width", WIDTH)
       .attr("height", HEIGHT);
 
-    // -------------------------
-    // LAYERS (important)
-    // -------------------------
-    const linkLayer = svg.append("g").attr("class", "links");
-    const nodeLayer = svg.append("g").attr("class", "nodes");
-    const labelLayer = svg.append("g").attr("class", "labels");
+    const linkLayer = svg.append("g");
+    const nodeLayer = svg.append("g");
+    const labelLayer = svg.append("g");
 
-    const centerX = WIDTH / 2;
-    const centerY = HEIGHT / 2;
+    const cx = WIDTH / 2;
+    const cy = HEIGHT / 2;
 
     // -------------------------
     // Central node
     // -------------------------
     nodeLayer.append("circle")
-      .attr("cx", centerX)
-      .attr("cy", centerY)
-      .attr("r", 50)
+      .attr("cx", cx)
+      .attr("cy", cy)
+      .attr("r", CENTER_RADIUS)
       .attr("fill", colors.primary)
       .attr("stroke", "#333")
       .attr("stroke-width", 1.5);
 
     labelLayer.append("text")
-      .attr("x", centerX)
-      .attr("y", centerY)
+      .attr("x", cx)
+      .attr("y", cy)
       .attr("text-anchor", "middle")
-      .attr("dy", "0.35em")
-      .attr("fill", "#fff")
+      .attr("dominant-baseline", "middle")
+      .style("fill", "#fff")
       .style("font-size", "14px")
       .style("font-weight", "600")
       .text(region);
 
     // -------------------------
-    // Violence nodes (radial)
+    // Violence nodes
     // -------------------------
-    const angleStep = (2 * Math.PI) / dataNodes.length;
+    const angleStep = (2 * Math.PI) / nodes.length;
 
-    dataNodes.forEach((d, i) => {
-      const angle = i * angleStep - Math.PI / 2; // start at top
-      const radius = 200;
+    nodes.forEach((d, i) => {
+      const angle = i * angleStep - Math.PI / 2;
 
-      const x = centerX + Math.cos(angle) * radius;
-      const y = centerY + Math.sin(angle) * radius;
+      const x = cx + Math.cos(angle) * OUTER_RADIUS;
+      const y = cy + Math.sin(angle) * OUTER_RADIUS;
 
-      const nodeRadius = radiusScale(d.value);
+      // Start link at edge of central node
+      const sx = cx + Math.cos(angle) * CENTER_RADIUS;
+      const sy = cy + Math.sin(angle) * CENTER_RADIUS;
 
-      // ---- LINK (below everything)
+      // Link
       linkLayer.append("line")
-        .attr("x1", centerX)
-        .attr("y1", centerY)
+        .attr("x1", sx)
+        .attr("y1", sy)
         .attr("x2", x)
         .attr("y2", y)
-        .attr("stroke", "#aaa")
+        .attr("stroke", "#999")
         .attr("stroke-width", 2)
         .attr("opacity", 0.8);
 
-      // ---- NODE
+      // Node
+      const r = radiusScale(d.value);
+
       nodeLayer.append("circle")
         .attr("cx", x)
         .attr("cy", y)
-        .attr("r", nodeRadius)
+        .attr("r", r)
         .attr("fill", colors.secondary)
         .attr("stroke", "#333")
         .attr("stroke-width", 1.2)
@@ -2455,10 +2466,10 @@ function createViolenceNetworkDiagram() {
         )
         .on("mouseout", hideTip);
 
-      // ---- LABEL (outside the node)
-      const labelOffset = nodeRadius + 10;
-      const lx = centerX + Math.cos(angle) * (radius + labelOffset);
-      const ly = centerY + Math.sin(angle) * (radius + labelOffset);
+      // Label outside node
+      const labelOffset = r + 12;
+      const lx = cx + Math.cos(angle) * (OUTER_RADIUS + labelOffset);
+      const ly = cy + Math.sin(angle) * (OUTER_RADIUS + labelOffset);
 
       labelLayer.append("text")
         .attr("x", lx)
@@ -2469,17 +2480,10 @@ function createViolenceNetworkDiagram() {
         .style("font-weight", "500")
         .text(d.label);
     });
-
   }
 
-  // -------------------------
-  // Event listeners
-  // -------------------------
   regionSelect.on("change", render);
   yearSelect.on("change", render);
 
-  // Initial render
   render();
 }
-
-
