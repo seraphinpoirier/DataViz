@@ -313,12 +313,19 @@
     margin: 0 0 8px;
   }
   
+  a.acled-link:link,
+  a.acled-link:visited {
+    text-decoration: none;
+    border-bottom: none;
+  }
+
   .metric-value {
     font-family: "Roboto Slab", serif;
     font-size: 2rem;
     margin: 0 0 4px;
     color: var(--nav-bg);
   }
+
   
   .metric-meta {
     margin: 0;
