@@ -918,4 +918,27 @@
   .viz-tab-panel.active {
     display: block !important;
   }
+
+
+  /* ==============
+     SANKEY CHART
+     ============== */
+
+  #sankey-diagram {
+    width: 100%;
+    height: 450px;
+    overflow: auto;
+    border: 1px solid #e5e7eb;
+  }
+  .sankey-controls {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 15px;
+    align-items: center;
+  }
+
+  .sankey-controls select {
+    padding: 5px 10px;
+  }
+
   

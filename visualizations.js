@@ -174,6 +174,11 @@ Promise.all([
       createChoropleth();
       createProportionalSymbolMap();
       createCartogram();
+
+      console.log("all worked");
+      createSankeyDiagram();
+      console.log("sankey ok");
+
     }
   )
   .catch(() => {
@@ -1884,6 +1889,262 @@ function createProportionalSymbolMap() {
     .style("font-weight", "600")
     .text("Event severity (bubbles)");
 }
+
+function createSankeyDiagram() {
+  const container = d3.select("#sankey-diagram");
+  const regionSelect = d3.select("#sankey-region-select");
+  const yearSelect = d3.select("#sankey-year-select");
+
+  const WIDTH = 1400;   // intentionally larger than viewport
+  const HEIGHT = 900;
+
+  // =========================
+  // Year dropdown (2018–2025)
+  // =========================
+  const years = [...new Set(
+    loadedData.civilianFatalities.map(d => d.year)
+  )]
+    .filter(y => y >= 2018 && y <= 2025)
+    .sort();
+
+  yearSelect.selectAll("option")
+    .data(years)
+    .enter()
+    .append("option")
+    .text(d => d);
+
+  // =========================
+  // Region dropdown
+  // =========================
+  regionSelect.selectAll("option")
+    .data(Object.keys(regionGroups))
+    .enter()
+    .append("option")
+    .text(d => d);
+
+  regionSelect.property("value", Object.keys(regionGroups)[0]);
+  yearSelect.property("value", years[years.length - 1]);
+
+  // =========================
+  // Helpers
+  // =========================
+  function sumByCountry(data, year, keyName) {
+    const map = new Map();
+    data.forEach(d => {
+      if (d.year === year) {
+        const cname = canonicalCountryName(d.country);
+        map.set(cname, (map.get(cname) || 0) + d[keyName]);
+      }
+    });
+    return map;
+  }
+
+  function sumPoliticalViolence(year) {
+    const map = new Map();
+    loadedData.politicalViolenceMonthly.forEach(d => {
+      if (d.year === year) {
+        const cname = canonicalCountryName(d.country);
+        map.set(cname, (map.get(cname) || 0) + d.events);
+      }
+    });
+    return map;
+  }
+
+  // =========================
+  // Render
+  // =========================
+  function render() {
+    container.selectAll("*").remove();
+
+    // 🔒 FORCE container behavior (overrides .chart-canvas CSS)
+    container
+      .style("position", "relative")
+      .style("width", "100%")
+      .style("height", "400px")
+      .style("overflow", "auto")
+      .style("border", "1px solid #e5e7eb");
+
+    const region = regionSelect.property("value");
+    const year = +yearSelect.property("value");
+
+    const regionCountries = regionGroups[region].map(canonicalCountryName);
+
+    const fatalityTypes = [
+      {
+        key: "civilian",
+        label: "Civilian fatalities",
+        map: sumByCountry(loadedData.civilianFatalities, year, "fatalities")
+      },
+      {
+        key: "targeting",
+        label: "Events targeting civilians",
+        map: sumByCountry(loadedData.eventsTargetingCivilians, year, "events")
+      },
+      {
+        key: "demo",
+        label: "Demonstration events",
+        map: sumByCountry(loadedData.demonstrationEvents, year, "events")
+      },
+      {
+        key: "violence",
+        label: "Political violence events",
+        map: sumPoliticalViolence(year)
+      }
+    ];
+
+    // =========================
+    // Build nodes & links
+    // =========================
+    const nodes = [];
+    const links = [];
+
+    nodes.push({ name: region });
+    let nextIndex = 1;
+
+    const countryIndex = {};
+
+    regionCountries.forEach(c => {
+      const hasData = fatalityTypes.some(ft => (ft.map.get(c) || 0) > 0);
+      if (hasData) {
+        countryIndex[c] = nextIndex;
+        nodes.push({ name: c });
+        nextIndex++;
+      }
+    });
+
+    const fatalityIndex = {};
+    fatalityTypes.forEach(ft => {
+      fatalityIndex[ft.key] = nextIndex;
+      nodes.push({ name: ft.label });
+      nextIndex++;
+    });
+
+    Object.keys(countryIndex).forEach(c => {
+      let total = 0;
+      fatalityTypes.forEach(ft => total += ft.map.get(c) || 0);
+      if (total > 0) {
+        links.push({
+          source: 0,
+          target: countryIndex[c],
+          value: total
+        });
+      }
+    });
+
+    Object.keys(countryIndex).forEach(c => {
+      fatalityTypes.forEach(ft => {
+        const val = ft.map.get(c) || 0;
+        if (val > 0) {
+          links.push({
+            source: countryIndex[c],
+            target: fatalityIndex[ft.key],
+            value: val
+          });
+        }
+      });
+    });
+
+    if (!links.length) {
+      container.append("p")
+        .style("padding", "20px")
+        .text("No data available for this region and year.");
+      return;
+    }
+
+    // =========================
+    // SVG (larger than container)
+    // =========================
+    const svg = container.append("svg")
+      .attr("width", WIDTH)
+      .attr("height", HEIGHT)
+      .style("display", "block")
+      .style("background", "#fff")
+      .style("cursor", "grab");
+
+    const zoomLayer = svg.append("g");
+
+    const zoom = d3.zoom()
+      .scaleExtent([0.5, 3])
+      .on("zoom", event => {
+        zoomLayer.attr("transform", event.transform);
+      });
+
+    svg.call(zoom);
+
+    // =========================
+    // Sankey
+    // =========================
+    const sankey = d3.sankey()
+      .nodeWidth(22)
+      .nodePadding(24)
+      .extent([[20, 20], [WIDTH - 20, HEIGHT - 20]]);
+
+    const graph = sankey({
+      nodes: nodes.map(d => ({ ...d })),
+      links: links.map(d => ({ ...d }))
+    });
+
+    const color = d3.scaleOrdinal(d3.schemeTableau10);
+
+    // Links
+    zoomLayer.append("g")
+      .selectAll("path")
+      .data(graph.links)
+      .enter()
+      .append("path")
+      .attr("d", d3.sankeyLinkHorizontal())
+      .attr("stroke", d => color(d.source.name))
+      .attr("stroke-width", d => Math.max(1, d.width))
+      .attr("fill", "none")
+      .attr("opacity", 0.45)
+      .on("mousemove", (event, d) => {
+        showTip(
+          `<strong>${d.source.name}</strong> → <strong>${d.target.name}</strong><br>
+           ${d.value.toLocaleString()} events/fatalities`,
+          event.pageX,
+          event.pageY
+        );
+      })
+      .on("mouseout", hideTip);
+
+    // Nodes
+    const node = zoomLayer.append("g")
+      .selectAll("g")
+      .data(graph.nodes)
+      .enter()
+      .append("g");
+
+    node.append("rect")
+      .attr("x", d => d.x0)
+      .attr("y", d => d.y0)
+      .attr("width", d => d.x1 - d.x0)
+      .attr("height", d => Math.max(1, d.y1 - d.y0))
+      .attr("fill", d => color(d.name))
+      .attr("stroke", "#333")
+      .on("mousemove", (event, d) => {
+        showTip(
+          `<strong>${d.name}</strong><br>
+           ${d.value.toLocaleString()} events/fatalities`,
+          event.pageX,
+          event.pageY
+        );
+      })
+      .on("mouseout", hideTip);
+
+    node.append("text")
+      .attr("x", d => d.x1 + 8)
+      .attr("y", d => (d.y0 + d.y1) / 2)
+      .attr("dy", "0.35em")
+      .style("font-size", "13px")
+      .text(d => d.name);
+  }
+
+  regionSelect.on("change", render);
+  yearSelect.on("change", render);
+
+  render();
+}
+
 
 function createCartogram() {
   if (!loadedData.fatalities || !worldFeatures || !worldFeatures.length) return;

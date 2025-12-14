@@ -13,6 +13,7 @@
     />
 
     <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://unpkg.com/d3-sankey@0.12.3/dist/d3-sankey.min.js"></script>
     <script src="https://unpkg.com/topojson-client@3"></script>
     <link rel="stylesheet" href="index.css" />
   </head>
@@ -83,6 +84,13 @@
           data-target="tab-maps"
         >
           Maps
+        </button>
+        <button
+          class="viz-tab-button"
+          type="button"
+          data-target="tab-networks"
+        >
+          Networks
         </button>
       </section>
 
@@ -261,6 +269,36 @@
 
         </div>
       </section>
+
+      <!-- TAB: NETWORKS -->
+      <section id="tab-networks" class="viz-tab-panel" aria-label="Networks">
+        <header class="tab-header">
+          <h2>Fatalities Flow by Region & Country</h2>
+          <p>Select a region and year to view conflict-related fatalities flowing from region → countries.</p>
+        </header>
+
+        <div class="sankey-controls">
+          <label>Region:
+            <select id="sankey-region-select"></select>
+          </label>
+
+          <label>Year:
+            <select id="sankey-year-select"></select>
+          </label>
+        </div>
+
+        <article class="chart-card chart-span-2">
+          <header class="chart-card-header">
+            <h3>Sankey diagram (Region → Countries)</h3>
+            <p>Flow width represents total reported fatalities.</p>
+          </header>
+          <div id="sankey-diagram" class="chart-canvas"></div>
+        </article>
+      </section>
+
+
+
+
     </main>
 
     <footer class="footer">
