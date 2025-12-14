@@ -175,9 +175,9 @@ Promise.all([
       createProportionalSymbolMap();
       createCartogram();
 
-      console.log("all worked");
       createSankeyDiagram();
-      console.log("sankey ok");
+
+      createViolenceNetworkDiagram();
 
     }
   )
@@ -2298,3 +2298,164 @@ function createCartogram() {
     .attr("fill", "#374151")
     .text("Total fatalities (area-deformed)");
 }
+
+function createViolenceNetworkDiagram() {
+  const container = d3.select("#network-diagram");
+  const regionSelect = d3.select("#network-region-select");
+  const yearSelect = d3.select("#network-year-select");
+
+  const WIDTH = 900;
+  const HEIGHT = 600;
+
+    // =========================
+  // Year dropdown (2018–2025)
+  // =========================
+  const years = [...new Set(
+    loadedData.civilianFatalities.map(d => d.year)
+  )]
+    .filter(y => y >= 2018 && y <= 2025)
+    .sort();
+
+  yearSelect.selectAll("option")
+    .data(years)
+    .enter()
+    .append("option")
+    .text(d => d);
+
+  // =========================
+  // Region dropdown
+  // =========================
+  regionSelect.selectAll("option")
+    .data(Object.keys(regionGroups))
+    .enter()
+    .append("option")
+    .text(d => d);
+
+  regionSelect.property("value", Object.keys(regionGroups)[0]);
+  yearSelect.property("value", years[years.length - 1]);
+
+  // -------------------------
+  // Aggregate violence data for the selected region/year
+  // -------------------------
+  function aggregateData(region, year) {
+    const types = [
+      { key: "civilianFatalities", label: "Civilian fatalities", data: loadedData.civilianFatalities },
+      { key: "eventsTargetingCivilians", label: "Events targeting civilians", data: loadedData.eventsTargetingCivilians },
+      { key: "demonstrationEvents", label: "Demonstration events", data: loadedData.demonstrationEvents },
+      { key: "politicalViolenceMonthly", label: "Political violence events", data: loadedData.politicalViolenceMonthly },
+    ];
+
+    return types.map(t => {
+      let sum = 0;
+      if (t.key === "politicalViolenceMonthly") {
+        t.data.forEach(d => {
+          if (regionGroups[region].some(c => canonicalCountryName(c) === canonicalCountryName(d.country))
+              && d.year === year) {
+            sum += d.events;
+          }
+        });
+      } else {
+        t.data.forEach(d => {
+          if (regionGroups[region].some(c => canonicalCountryName(c) === canonicalCountryName(d.country))
+              && d.year === year) {
+            sum += d.fatalities || d.events;
+          }
+        });
+      }
+      return { label: t.label, value: sum };
+    }).filter(d => d.value > 0);
+  }
+
+  // -------------------------
+  // Render network diagram
+  // -------------------------
+  function render() {
+    container.selectAll("*").remove();
+
+    const region = regionSelect.property("value");
+    const year = +yearSelect.property("value");
+
+    const dataNodes = aggregateData(region, year);
+    if (!dataNodes.length) {
+      container.append("div").text("No data for this selection");
+      return;
+    }
+
+    const radiusScale = d3.scaleSqrt()
+      .domain([0, d3.max(dataNodes, d => d.value)])
+      .range([10, 60]);
+
+    const svg = container.append("svg")
+      .attr("width", WIDTH)
+      .attr("height", HEIGHT);
+
+    const centerX = WIDTH / 2;
+    const centerY = HEIGHT / 2;
+
+    // Central node (region)
+    svg.append("circle")
+      .attr("cx", centerX)
+      .attr("cy", centerY)
+      .attr("r", 50)
+      .attr("fill", colors.primary)
+      .attr("stroke", "#333")
+      .attr("stroke-width", 1.5);
+
+    svg.append("text")
+      .attr("x", centerX)
+      .attr("y", centerY)
+      .attr("text-anchor", "middle")
+      .attr("dy", "0.35em")
+      .attr("fill", "#fff")
+      .style("font-size", "14px")
+      .text(region);
+
+    // Arrange violence types in a circle
+    const angleStep = 360 / dataNodes.length;
+    dataNodes.forEach((d, i) => {
+      const angle = (i * angleStep) * (Math.PI / 180);
+      const x = centerX + Math.cos(angle) * 200;
+      const y = centerY + Math.sin(angle) * 200;
+
+      // Link
+      svg.append("line")
+        .attr("x1", centerX)
+        .attr("y1", centerY)
+        .attr("x2", x)
+        .attr("y2", y)
+        .attr("stroke", "#888")
+        .attr("stroke-width", 2);
+
+      // Node circle
+      svg.append("circle")
+        .attr("cx", x)
+        .attr("cy", y)
+        .attr("r", radiusScale(d.value))
+        .attr("fill", colors.secondary)
+        .attr("stroke", "#333")
+        .attr("stroke-width", 1.2)
+        .on("mousemove", (event) => showTip(`${d.label}<br>${d.value.toLocaleString()}`, event.pageX, event.pageY))
+        .on("mouseout", hideTip);
+
+      // Node label
+      svg.append("text")
+        .attr("x", x)
+        .attr("y", y)
+        .attr("text-anchor", "middle")
+        .attr("dy", "0.35em")
+        .text(d.label)
+        .style("font-size", "12px");
+    });
+  }
+
+  // -------------------------
+  // Event listeners
+  // -------------------------
+  regionSelect.on("change", render);
+  yearSelect.on("change", render);
+
+  // Initial render
+  render();
+}
+
+

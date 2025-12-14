@@ -272,29 +272,64 @@
 
       <!-- TAB: NETWORKS -->
       <section id="tab-networks" class="viz-tab-panel" aria-label="Networks">
-        <header class="tab-header">
-          <h2>Fatalities Flow by Region & Country</h2>
-          <p>Select a region and year to view conflict-related fatalities flowing from region → countries.</p>
+      <!-- Sankey Diagram Section -->
+      <header class="tab-header">
+        <h2>Fatalities Flow by Region & Country</h2>
+        <p>Select a region and year to view conflict-related fatalities flowing from region → countries.</p>
+      </header>
+
+      <div class="sankey-controls">
+        <label>Region:
+          <select id="sankey-region-select"></select>
+        </label>
+
+        <label>Year:
+          <select id="sankey-year-select"></select>
+        </label>
+      </div>
+
+      <article class="chart-card chart-span-2">
+        <header class="chart-card-header">
+          <h3>Sankey diagram (Region → Countries)</h3>
+          <p>Flow width represents total reported fatalities.</p>
+        </header>
+        <div id="sankey-diagram" class="chart-canvas"></div>
+      </article>
+
+      <!-- Violence Network Section -->
+      <header class="tab-header">
+        <h2>Violence network by region, country, and year</h2>
+        <p>
+          Select a region, country, and year to explore how different forms of violence connect to the selected location.
+          Node size represents the total number of events or fatalities.
+        </p>
+      </header>
+
+      <div class="network-controls">
+        <label>
+          Region:
+          <select id="network-region-select"></select>
+        </label>
+
+        <label>
+          Year:
+          <select id="network-year-select"></select>
+        </label>
+      </div>
+
+      <article class="chart-card chart-span-2">
+        <header class="chart-card-header">
+          <h3>Violence type network</h3>
+          <p>
+            The central node represents the selected region or country. Surrounding nodes represent types of violence,
+            with size proportional to total reported incidents.
+          </p>
         </header>
 
-        <div class="sankey-controls">
-          <label>Region:
-            <select id="sankey-region-select"></select>
-          </label>
+        <div id="network-diagram" class="chart-canvas"></div>
+      </article>
+    </section>
 
-          <label>Year:
-            <select id="sankey-year-select"></select>
-          </label>
-        </div>
-
-        <article class="chart-card chart-span-2">
-          <header class="chart-card-header">
-            <h3>Sankey diagram (Region → Countries)</h3>
-            <p>Flow width represents total reported fatalities.</p>
-          </header>
-          <div id="sankey-diagram" class="chart-canvas"></div>
-        </article>
-      </section>
 
 
 

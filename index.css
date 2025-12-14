@@ -940,5 +940,20 @@
   .sankey-controls select {
     padding: 5px 10px;
   }
+/* ==============
+     NETWORK CHART
+     ============== */
+
+  .network-controls {
+    display: flex;
+    gap: 1.5rem;
+    margin-bottom: 1rem;
+    align-items: center;
+  }
+
+  .network-controls label {
+    font-size: 0.9rem;
+  }
+
 
   
